@@ -107,11 +107,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         // add project notes
                         for (_b = 0, _c = json.project_notes; _b < _c.length; _b++) {
                             note = _c[_b];
-                            projectIdMappings[note.project_id].appendStringToNote(note.posted_at + ": " + note.content);
-                            if (note.file_attachment) {
-                                "";
-                                // TODO: deal with file attachment in projects
-                            }
+                            projectIdMappings[note.project_id].note = projectIdMappings[note.project_id].note + ("\n\n " + note.posted_at + ": " + note.content + " " + (note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''));
                         }
                         priorityTagGroup = new Tag('Priority', null);
                         priorityTags = {

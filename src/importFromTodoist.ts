@@ -38,11 +38,7 @@
 
         // add project notes
         for (const note of json.project_notes) {
-            projectIdMappings[note.project_id].appendStringToNote(`${note.posted_at}: ${note.content}`)
-            if (note.file_attachment) {
-                ""
-                // TODO: deal with file attachment in projects
-            }
+            projectIdMappings[note.project_id].note = projectIdMappings[note.project_id].note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
         }
 
         // CREATE PRIORITY TAGS
