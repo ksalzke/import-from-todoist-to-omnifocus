@@ -17,12 +17,14 @@
         const projectIdMappings = {}
 
         // first, create all projects in a flat structure
-        const projects = json.projects
+        const projects = json.projects // TODO: confirm treatment of ...Object.values(json.completed.projects)
         for (const project of projects) {
             const createdProject = new Project(project.name, null)
             createdProject.task.added = new Date(project.created_at)
             projectIdMappings[project.id] = createdProject.task
             createdProject.sequential = false
+
+            //if (json.completed.projects.some((p) => p.id === project.id)) createdProject.markComplete(new Date(json.completed.projects[project.id].updated_at))
         } 
 
         // move any nested projects to the correct place

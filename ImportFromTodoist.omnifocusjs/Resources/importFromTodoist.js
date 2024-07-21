@@ -85,13 +85,15 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         contents = file.contents.toString();
                         json = JSON.parse(contents);
                         projectIdMappings = {};
-                        projects = json.projects;
+                        projects = json.projects // TODO: confirm treatment of ...Object.values(json.completed.projects)
+                        ;
                         for (_i = 0, projects_1 = projects; _i < projects_1.length; _i++) {
                             project = projects_1[_i];
                             createdProject = new Project(project.name, null);
                             createdProject.task.added = new Date(project.created_at);
                             projectIdMappings[project.id] = createdProject.task;
                             createdProject.sequential = false;
+                            //if (json.completed.projects.some((p) => p.id === project.id)) createdProject.markComplete(new Date(json.completed.projects[project.id].updated_at))
                         }
                         // move any nested projects to the correct place
                         for (_a = 0, projects_2 = projects; _a < projects_2.length; _a++) {
