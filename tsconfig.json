@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "lib": [
-            "ES2017"
+            "ESNext"
         ],
         "outDir": "ImportFromTodoist.omnifocusjs/Resources"
     },

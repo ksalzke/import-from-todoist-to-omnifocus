@@ -77,10 +77,7 @@
             }
 
             if (task.completed_at) createdTask.markComplete(new Date(task.completed_at))
-
-            // TODO: add recurring info
             
-            // TODO: consider whether 'child_order' is required
             // TODO: add estimatedMinutes based on 'duration' (but need to confirm how this data is exported from Todoist)
             
             // add tags
@@ -92,7 +89,7 @@
             return createdTask
         }
 
-        /*
+        
         // APPROACH 1: only add once parent exists, loop through
 
         while (tasks.length > 0) {
@@ -108,11 +105,11 @@
         
             // Filter out tasks that have been added
             tasks = tasks.filter((_, index) => !tasksToRemove.includes(index));
-        } */
+        } 
 
         
         // APPROACH 2: create all then move
-
+        /*
         for (const task of tasks) {
             addTask(task, null)
         }
@@ -125,6 +122,7 @@
                 moveTasks([omniTask], parent)
             }
         }
+            */
 
         // add notes to tasks
         for (const note of json.notes) {
@@ -134,9 +132,6 @@
 
        
         // TODO: add notes for completed tasks
-        // TODO: json.completed - other
-        
-        // TODO: add task comments
 
         // TODO: confirm whether section_id (and sections) are required
 

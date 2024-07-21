@@ -63,8 +63,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
                 if (task.completed_at)
                     createdTask.markComplete(new Date(task.completed_at));
-                // TODO: add recurring info
-                // TODO: consider whether 'child_order' is required
                 // TODO: add estimatedMinutes based on 'duration' (but need to confirm how this data is exported from Todoist)
                 // add tags
                 if (task.labels.length > 0) {
@@ -73,14 +71,14 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
                 return createdTask;
             }
-            var picker, url, file, contents, json, projectIdMappings, projects, _i, projects_1, project, createdProject, _a, projects_2, project, omniProject, parent, _b, _c, note, priorityTagGroup, priorityTags, repeatingTag, taskIdMappings, tasks, _d, tasks_1, task, _e, tasks_2, task, omniTask, parent, _f, _g, note, inboxProject;
-            return __generator(this, function (_h) {
-                switch (_h.label) {
+            var picker, url, file, contents, json, projectIdMappings, projects, _i, projects_1, project, createdProject, _a, projects_2, project, omniProject, parent, _b, _c, note, priorityTagGroup, priorityTags, repeatingTag, taskIdMappings, tasks, _loop_1, _d, _e, note, inboxProject;
+            return __generator(this, function (_f) {
+                switch (_f.label) {
                     case 0:
                         picker = new FilePicker();
                         return [4 /*yield*/, picker.show()];
                     case 1:
-                        url = _h.sent();
+                        url = _f.sent();
                         file = FileWrapper.fromURL(url[0], null);
                         contents = file.contents.toString();
                         json = JSON.parse(contents);
@@ -119,40 +117,40 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         repeatingTag = new Tag('repeating', null);
                         taskIdMappings = {};
                         tasks = __spreadArray(__spreadArray([], json.items, true), json.completed.items.map(function (task) { return task.item_object; }), true);
-                        /*
-                        // APPROACH 1: only add once parent exists, loop through
-                
-                        while (tasks.length > 0) {
-                            const tasksToRemove: number[] = [];
-                        
-                            for (let i = 0; i < tasks.length; i++) {
-                                const task = tasks[i];
+                        _loop_1 = function () {
+                            var tasksToRemove = [];
+                            for (var i = 0; i < tasks.length; i++) {
+                                var task = tasks[i];
                                 if (!task.parent_id || task.parent_id in taskIdMappings) {
                                     addTask(task, taskIdMappings[task.parent_id]); // add task
                                     tasksToRemove.push(i);
                                 }
                             }
-                        
                             // Filter out tasks that have been added
-                            tasks = tasks.filter((_, index) => !tasksToRemove.includes(index));
-                        } */
-                        // APPROACH 2: create all then move
-                        for (_d = 0, tasks_1 = tasks; _d < tasks_1.length; _d++) {
-                            task = tasks_1[_d];
-                            addTask(task, null);
+                            tasks = tasks.filter(function (_, index) { return !tasksToRemove.includes(index); });
+                        };
+                        // APPROACH 1: only add once parent exists, loop through
+                        while (tasks.length > 0) {
+                            _loop_1();
                         }
+                        // APPROACH 2: create all then move
+                        /*
+                        for (const task of tasks) {
+                            addTask(task, null)
+                        }
+                
                         // move any nested tasks to the correct place
-                        for (_e = 0, tasks_2 = tasks; _e < tasks_2.length; _e++) {
-                            task = tasks_2[_e];
+                        for (const task of tasks) {
                             if (task.parent_id) {
-                                omniTask = taskIdMappings[task.id];
-                                parent = taskIdMappings[task.parent_id];
-                                moveTasks([omniTask], parent);
+                                const omniTask = taskIdMappings[task.id]
+                                const parent = taskIdMappings[task.parent_id]
+                                moveTasks([omniTask], parent)
                             }
                         }
+                            */
                         // add notes to tasks
-                        for (_f = 0, _g = json.notes; _f < _g.length; _f++) {
-                            note = _g[_f];
+                        for (_d = 0, _e = json.notes; _d < _e.length; _d++) {
+                            note = _e[_d];
                             taskIdMappings[note.item_id].note = taskIdMappings[note.item_id].note + ("\n\n " + note.posted_at + ": " + note.content + " " + (note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''));
                         }
                         inboxProject = projectNamed("Inbox");
