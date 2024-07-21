@@ -53,6 +53,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 taskIdMappings[task.id] = createdTask;
                 // update task info
                 createdTask.added = new Date(task.added_at);
+                createdTask.sequential = false;
                 if (task.due)
                     createdTask.dueDate = new Date(task.due.date);
                 if (task.completed_at)
@@ -85,6 +86,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             createdProject = new Project(project.name, null);
                             createdProject.task.added = new Date(project.created_at);
                             projectIdMappings[project.id] = createdProject.task;
+                            createdProject.sequential = false;
                         }
                         // move any nested projects to the correct place
                         for (_a = 0, projects_2 = projects; _a < projects_2.length; _a++) {

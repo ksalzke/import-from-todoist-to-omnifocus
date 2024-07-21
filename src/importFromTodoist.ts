@@ -22,6 +22,7 @@
             const createdProject = new Project(project.name, null)
             createdProject.task.added = new Date(project.created_at)
             projectIdMappings[project.id] = createdProject.task
+            createdProject.sequential = false
         } 
 
         // move any nested projects to the correct place
@@ -66,6 +67,7 @@
 
             // update task info
             createdTask.added = new Date(task.added_at)
+            createdTask.sequential = false
             if (task.due) createdTask.dueDate = new Date(task.due.date) 
 
             if (task.completed_at) createdTask.markComplete(new Date(task.completed_at))
