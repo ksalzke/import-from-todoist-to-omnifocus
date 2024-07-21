@@ -52,6 +52,7 @@
             4: new Tag("Priority 4", priorityTagGroup)
 
         }
+        const repeatingTag = new Tag('repeating', null)
         
         // CONTINUE BY CREATING TASKS
         const taskIdMappings = {}
@@ -68,7 +69,14 @@
             // update task info
             createdTask.added = new Date(task.added_at)
             createdTask.sequential = false
-            if (task.due) createdTask.dueDate = new Date(task.due.date) 
+            if (task.due) {
+                createdTask.dueDate = new Date(task.due.date)
+                if (task.due.is_recurring) {
+                    createdTask.addTag(repeatingTag)
+                    createdTask.appendStringToNote(`REPEATING: ${task.due.string}\n\n`)
+                }
+                
+            }
 
             if (task.completed_at) createdTask.markComplete(new Date(task.completed_at))
 
@@ -119,13 +127,18 @@
                 moveTasks([omniTask], parent)
             }
         }
+
+        // add notes to tasks
+        for (const note of json.notes) {
+            taskIdMappings[note.item_id].note = taskIdMappings[note.item_id].note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
+        }
         
 
        
         // TODO: add notes for completed tasks
-        // TODO: add notes
         // TODO: json.completed - other
         
+        // TODO: add task comments
 
         // TODO: confirm whether section_id (and sections) are required
 

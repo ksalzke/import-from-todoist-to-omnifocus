@@ -54,8 +54,13 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 // update task info
                 createdTask.added = new Date(task.added_at);
                 createdTask.sequential = false;
-                if (task.due)
+                if (task.due) {
                     createdTask.dueDate = new Date(task.due.date);
+                    if (task.due.is_recurring) {
+                        createdTask.addTag(repeatingTag);
+                        createdTask.appendStringToNote("REPEATING: " + task.due.string + "\n\n");
+                    }
+                }
                 if (task.completed_at)
                     createdTask.markComplete(new Date(task.completed_at));
                 // TODO: add recurring info
@@ -68,14 +73,14 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
                 return createdTask;
             }
-            var picker, url, file, contents, json, projectIdMappings, projects, _i, projects_1, project, createdProject, _a, projects_2, project, omniProject, parent, _b, _c, note, priorityTagGroup, priorityTags, taskIdMappings, tasks, _d, tasks_1, task, _e, tasks_2, task, omniTask, parent, inboxProject;
-            return __generator(this, function (_f) {
-                switch (_f.label) {
+            var picker, url, file, contents, json, projectIdMappings, projects, _i, projects_1, project, createdProject, _a, projects_2, project, omniProject, parent, _b, _c, note, priorityTagGroup, priorityTags, repeatingTag, taskIdMappings, tasks, _d, tasks_1, task, _e, tasks_2, task, omniTask, parent, _f, _g, note, inboxProject;
+            return __generator(this, function (_h) {
+                switch (_h.label) {
                     case 0:
                         picker = new FilePicker();
                         return [4 /*yield*/, picker.show()];
                     case 1:
-                        url = _f.sent();
+                        url = _h.sent();
                         file = FileWrapper.fromURL(url[0], null);
                         contents = file.contents.toString();
                         json = JSON.parse(contents);
@@ -113,6 +118,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             3: new Tag("Priority 3", priorityTagGroup),
                             4: new Tag("Priority 4", priorityTagGroup)
                         };
+                        repeatingTag = new Tag('repeating', null);
                         taskIdMappings = {};
                         tasks = __spreadArray(__spreadArray([], json.items, true), json.completed.items.map(function (task) { return task.item_object; }), true);
                         /*
@@ -145,6 +151,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                 parent = taskIdMappings[task.parent_id];
                                 moveTasks([omniTask], parent);
                             }
+                        }
+                        // add notes to tasks
+                        for (_f = 0, _g = json.notes; _f < _g.length; _f++) {
+                            note = _g[_f];
+                            taskIdMappings[note.item_id].note = taskIdMappings[note.item_id].note + ("\n\n " + note.posted_at + ": " + note.content + " " + (note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''));
                         }
                         inboxProject = projectNamed("Inbox");
                         moveTasks(inboxProject.tasks, inbox.ending);
