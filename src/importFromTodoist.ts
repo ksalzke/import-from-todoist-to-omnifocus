@@ -56,17 +56,19 @@
         const taskIdMappings = {}
 
         // first, create all projects in a flat structure
-        const tasks = json.items
+        let tasks = [...json.items, ...json.completed.items.map(task => task.item_object)]
 
-        function addTask (task) {
+        function addTask (task, location) {
             // create task and save ID mapping for later
-            const project = projectIdMappings[task.project_id] 
-            const createdTask = new Task(task.content, project) // TODO: work out if it is task.content or task.description that is needed (or both)
+            const taskName = task.description ? `${task.content}\n ${task.description}` : task.content
+            const createdTask = new Task(taskName, location || projectIdMappings[task.project_id] )
             taskIdMappings[task.id] = createdTask
 
             // update task info
             createdTask.added = new Date(task.added_at)
-            if (task.due) createdTask.dueDate = new Date(task.due.date)
+            if (task.due) createdTask.dueDate = new Date(task.due.date) 
+
+            if (task.completed_at) createdTask.markComplete(new Date(task.completed_at))
 
             // TODO: add recurring info
             
@@ -74,14 +76,37 @@
             // TODO: add estimatedMinutes based on 'duration' (but need to confirm how this data is exported from Todoist)
             
             // add tags
-            //const tagArray = task.labels.map(label => flattenedTags.byName(label) || new Tag(label, null))
-            // createdTask.addTags([priorityTags[task.priority], ...tagArray]) FIXME: RE-ENABLE TAGS
+            if (task.labels.length > 0) {
+                const tagArray = task.labels.map(label => flattenedTags.byName(label) || new Tag(label, null))
+                createdTask.addTags(tagArray)
+            }
 
             return createdTask
         }
 
+        /*
+        // APPROACH 1: only add once parent exists, loop through
+
+        while (tasks.length > 0) {
+            const tasksToRemove: number[] = [];
+        
+            for (let i = 0; i < tasks.length; i++) {
+                const task = tasks[i];
+                if (!task.parent_id || task.parent_id in taskIdMappings) {
+                    addTask(task, taskIdMappings[task.parent_id]); // add task
+                    tasksToRemove.push(i);
+                }
+            }
+        
+            // Filter out tasks that have been added
+            tasks = tasks.filter((_, index) => !tasksToRemove.includes(index));
+        } */
+
+        
+        // APPROACH 2: create all then move
+
         for (const task of tasks) {
-            addTask(task)
+            addTask(task, null)
         }
 
         // move any nested tasks to the correct place
@@ -89,24 +114,25 @@
             if (task.parent_id) {
                 const omniTask = taskIdMappings[task.id]
                 const parent = taskIdMappings[task.parent_id]
-                // moveTasks([omniTask], parent) FIXME: re-enable move
+                moveTasks([omniTask], parent)
             }
         }
+        
 
-        // mark any completed items as completed
-        for (const completedTask of json.completed.items) {
-            const newTask = addTask(completedTask.item_object)
-            newTask.markComplete(new Date(completedTask.completed_at))
-
-            // TODO: add notes for completed tasks
-        }
+       
+        // TODO: add notes for completed tasks
+        // TODO: add notes
         // TODO: json.completed - other
+        
 
         // TODO: confirm whether section_id (and sections) are required
 
 
 
-        // TODO: deal with inbox project (at end)
+        // deal with inbox project (at end)
+        const inboxProject = projectNamed("Inbox")
+        moveTasks(inboxProject.tasks, inbox.ending)
+        deleteObject(inboxProject)
 
     })
 
