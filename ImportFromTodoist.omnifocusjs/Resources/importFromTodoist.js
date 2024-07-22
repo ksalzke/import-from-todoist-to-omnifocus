@@ -63,22 +63,20 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 }
                 if (task.completed_at)
                     createdTask.markComplete(new Date(task.completed_at));
-                // TODO: add estimatedMinutes based on 'duration' (but need to confirm how this data is exported from Todoist)
                 // add tags
-                if (task.labels.length > 0) {
-                    var tagArray = task.labels.map(function (label) { return flattenedTags.byName(label) || new Tag(label, null); });
-                    createdTask.addTags(tagArray);
-                }
+                createdTask.removeTags(createdTask.tags); // first remove any existing tags that might have been inherited from the parent
+                var tagArray = task.labels.map(function (label) { return flattenedTags.byName(label) || new Tag(label, null); });
+                createdTask.addTags(__spreadArray([priorityTags[task.priority]], tagArray, true));
                 return createdTask;
             }
-            var picker, url, file, contents, json, projectIdMappings, projects, _i, projects_1, project, createdProject, _a, projects_2, project, omniProject, parent, _b, _c, note, priorityTagGroup, priorityTags, repeatingTag, taskIdMappings, tasks, _loop_1, _d, _e, note, inboxProject;
-            return __generator(this, function (_f) {
-                switch (_f.label) {
+            var picker, url, file, contents, json, projectIdMappings, projects, _i, projects_1, project, createdProject, _a, _b, completedProject, _c, projects_2, project, omniProject, parent, _d, _e, note, priorityTagGroup, priorityTags, repeatingTag, taskIdMappings, tasks, _loop_1, completedNotes, _f, _g, note, inboxProject;
+            return __generator(this, function (_h) {
+                switch (_h.label) {
                     case 0:
                         picker = new FilePicker();
                         return [4 /*yield*/, picker.show()];
                     case 1:
-                        url = _f.sent();
+                        url = _h.sent();
                         file = FileWrapper.fromURL(url[0], null);
                         contents = file.contents.toString();
                         json = JSON.parse(contents);
@@ -91,11 +89,15 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             createdProject.task.added = new Date(project.created_at);
                             projectIdMappings[project.id] = createdProject.task;
                             createdProject.sequential = false;
-                            //if (json.completed.projects.some((p) => p.id === project.id)) createdProject.markComplete(new Date(json.completed.projects[project.id].updated_at))
+                        }
+                        // mark any completed projects complete
+                        for (_a = 0, _b = json.completed.projects; _a < _b.length; _a++) {
+                            completedProject = _b[_a];
+                            projectIdMappings[completedProject.id].markComplete(new Date(completedProject.updated_at));
                         }
                         // move any nested projects to the correct place
-                        for (_a = 0, projects_2 = projects; _a < projects_2.length; _a++) {
-                            project = projects_2[_a];
+                        for (_c = 0, projects_2 = projects; _c < projects_2.length; _c++) {
+                            project = projects_2[_c];
                             if (project.parent_id) {
                                 omniProject = projectIdMappings[project.id];
                                 parent = projectIdMappings[project.parent_id];
@@ -103,11 +105,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             }
                         }
                         // add project notes
-                        for (_b = 0, _c = json.project_notes; _b < _c.length; _b++) {
-                            note = _c[_b];
+                        for (_d = 0, _e = json.project_notes; _d < _e.length; _d++) {
+                            note = _e[_d];
                             projectIdMappings[note.project_id].note = projectIdMappings[note.project_id].note + ("\n\n " + note.posted_at + ": " + note.content + " " + (note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''));
                         }
-                        priorityTagGroup = new Tag('Priority', null);
+                        priorityTagGroup = tagNamed('Priority') || new Tag('Priority', null);
                         priorityTags = {
                             1: new Tag("Priority 1", priorityTagGroup),
                             2: new Tag("Priority 2", priorityTagGroup),
@@ -133,24 +135,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         while (tasks.length > 0) {
                             _loop_1();
                         }
-                        // APPROACH 2: create all then move
-                        /*
-                        for (const task of tasks) {
-                            addTask(task, null)
-                        }
-                
-                        // move any nested tasks to the correct place
-                        for (const task of tasks) {
-                            if (task.parent_id) {
-                                const omniTask = taskIdMappings[task.id]
-                                const parent = taskIdMappings[task.parent_id]
-                                moveTasks([omniTask], parent)
-                            }
-                        }
-                            */
-                        // add notes to tasks
-                        for (_d = 0, _e = json.notes; _d < _e.length; _d++) {
-                            note = _e[_d];
+                        completedNotes = json.completed.items.flatMap(function (item) { return item.notes; });
+                        for (_f = 0, _g = __spreadArray(__spreadArray([], json.notes, true), completedNotes, true); _f < _g.length; _f++) {
+                            note = _g[_f];
                             taskIdMappings[note.item_id].note = taskIdMappings[note.item_id].note + ("\n\n " + note.posted_at + ": " + note.content + " " + (note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''));
                         }
                         inboxProject = projectNamed("Inbox");
@@ -166,3 +153,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     };
     return action;
 })();
+// IMPROVEMENT: use directly with Todoist API rather than export
+// IMPROVEMENT: add support for sections
+// IMPROVEMENT: add estimatedMinutes based on 'duration' (but need to confirm how this data is exported from Todoist)

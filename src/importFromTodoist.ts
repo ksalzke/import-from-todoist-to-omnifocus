@@ -23,9 +23,12 @@
             createdProject.task.added = new Date(project.created_at)
             projectIdMappings[project.id] = createdProject.task
             createdProject.sequential = false
-
-            //if (json.completed.projects.some((p) => p.id === project.id)) createdProject.markComplete(new Date(json.completed.projects[project.id].updated_at))
         } 
+
+        // mark any completed projects complete
+        for (const completedProject of json.completed.projects) {
+            projectIdMappings[completedProject.id].markComplete(new Date(completedProject.updated_at))
+        }
 
         // move any nested projects to the correct place
         for (const project of projects) {
@@ -42,7 +45,7 @@
         }
 
         // CREATE PRIORITY TAGS
-        const priorityTagGroup = new Tag('Priority', null)
+        const priorityTagGroup = tagNamed('Priority') || new Tag('Priority', null)
         const priorityTags = {
             1: new Tag("Priority 1", priorityTagGroup),
             2: new Tag("Priority 2", priorityTagGroup),
@@ -78,13 +81,11 @@
 
             if (task.completed_at) createdTask.markComplete(new Date(task.completed_at))
             
-            // TODO: add estimatedMinutes based on 'duration' (but need to confirm how this data is exported from Todoist)
-            
             // add tags
-            if (task.labels.length > 0) {
-                const tagArray = task.labels.map(label => flattenedTags.byName(label) || new Tag(label, null))
-                createdTask.addTags(tagArray)
-            }
+            createdTask.removeTags(createdTask.tags) // first remove any existing tags that might have been inherited from the parent
+
+            const tagArray = task.labels.map(label => flattenedTags.byName(label) || new Tag(label, null))
+            createdTask.addTags([priorityTags[task.priority], ...tagArray])
 
             return createdTask
         }
@@ -125,18 +126,11 @@
             */
 
         // add notes to tasks
-        for (const note of json.notes) {
+        const completedNotes = json.completed.items.flatMap(item => item.notes)
+        for (const note of [...json.notes, ...completedNotes]) {
             taskIdMappings[note.item_id].note = taskIdMappings[note.item_id].note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
         }
         
-
-       
-        // TODO: add notes for completed tasks
-
-        // TODO: confirm whether section_id (and sections) are required
-
-
-
         // deal with inbox project (at end)
         const inboxProject = projectNamed("Inbox")
         moveTasks(inboxProject.tasks, inbox.ending)
@@ -150,3 +144,7 @@
 
     return action
 })()
+
+// IMPROVEMENT: use directly with Todoist API rather than export
+// IMPROVEMENT: add support for sections
+// IMPROVEMENT: add estimatedMinutes based on 'duration' (but need to confirm how this data is exported from Todoist)
