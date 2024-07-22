@@ -44,8 +44,33 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 (function () {
+    var credentials = new Credentials();
     var action = new PlugIn.Action(function (selection) {
         return __awaiter(this, void 0, void 0, function () {
+            function getEndPoint(endpoint) {
+                return __awaiter(this, void 0, void 0, function () {
+                    var baseUrl, url, request, response;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                baseUrl = "https://api.todoist.com/rest/v2/";
+                                url = baseUrl + endpoint;
+                                request = new URL.FetchRequest();
+                                request.method = 'GET';
+                                request.headers = {
+                                    Accept: "application/json",
+                                    "Content-Type": "application/json",
+                                    "Authorization": "Bearer " + credentials.read('Todoist').password
+                                };
+                                request.url = URL.fromString(url);
+                                return [4 /*yield*/, request.fetch()];
+                            case 1:
+                                response = _a.sent();
+                                return [2 /*return*/, JSON.parse(response.bodyString)];
+                        }
+                    });
+                });
+            }
             function addTask(task, location) {
                 // create task and save ID mapping for later
                 var taskName = task.description ? task.content + "\n " + task.description : task.content;
@@ -69,19 +94,24 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 createdTask.addTags(__spreadArray([priorityTags[task.priority]], tagArray, true));
                 return createdTask;
             }
-            var picker, url, file, contents, json, projectIdMappings, projects, _i, projects_1, project, createdProject, _a, _b, completedProject, _c, projects_2, project, omniProject, parent, _d, _e, note, priorityTagGroup, priorityTags, repeatingTag, taskIdMappings, tasks, _loop_1, completedNotes, _f, _g, note, inboxProject;
+            var credentialsExist, form, projectIdMappings, projects, _i, projects_1, project, createdProject, _a, _b, completedProject, _c, projects_2, project, omniProject, parent, _d, _e, note, priorityTagGroup, priorityTags, repeatingTag, taskIdMappings, tasks, _loop_1, completedNotes, _f, _g, note, inboxProject;
             return __generator(this, function (_h) {
                 switch (_h.label) {
                     case 0:
-                        picker = new FilePicker();
-                        return [4 /*yield*/, picker.show()];
+                        credentialsExist = credentials.read('Todoist');
+                        if (!!credentialsExist) return [3 /*break*/, 2];
+                        form = new Form();
+                        form.addField(new Form.Field.String('apiToken', 'API Token', null, null), null);
+                        return [4 /*yield*/, form.show('Enter Todoist API Token', 'Continue')];
                     case 1:
-                        url = _h.sent();
-                        file = FileWrapper.fromURL(url[0], null);
-                        contents = file.contents.toString();
-                        json = JSON.parse(contents);
+                        _h.sent();
+                        credentials.write('Todoist', 'Todoist User', form.values.apiToken);
+                        _h.label = 2;
+                    case 2:
                         projectIdMappings = {};
-                        projects = json.projects // TODO: confirm treatment of ...Object.values(json.completed.projects)
+                        return [4 /*yield*/, getEndPoint('projects')]; // TODO: confirm treatment of ...Object.values(json.completed.projects)
+                    case 3:
+                        projects = _h.sent() // TODO: confirm treatment of ...Object.values(json.completed.projects)
                         ;
                         for (_i = 0, projects_1 = projects; _i < projects_1.length; _i++) {
                             project = projects_1[_i];

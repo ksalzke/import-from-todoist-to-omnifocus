@@ -1,23 +1,42 @@
 
 (() => {
+    const credentials = new Credentials()
     const action = new PlugIn.Action(async function (selection: Selection) {
 
-        const picker = new FilePicker()
+        const credentialsExist = credentials.read('Todoist')
 
-        const url = await picker.show()
+        if (!credentialsExist) {
 
-        const file = FileWrapper.fromURL(url[0], null)
+            const form = new Form()
+            form.addField(new Form.Field.String('apiToken', 'API Token',null, null), null)
+            await form.show('Enter Todoist API Token', 'Continue')
+            
+            credentials.write('Todoist', 'Todoist User', form.values.apiToken)
+        }
 
-        const contents = file.contents.toString()
+        async function getEndPoint(endpoint: string) {
+            const baseUrl = "https://api.todoist.com/rest/v2/"
+		    const url = baseUrl + endpoint
 
-        const json = JSON.parse(contents)
+            const request = new URL.FetchRequest()
+            request.method = 'GET'
+            request.headers = {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${credentials.read('Todoist').password}`
+                }
+            request.url = URL.fromString(url)
 
+
+            const response = await request.fetch()
+            return JSON.parse(response.bodyString)
+        }
 
         // START BY CREATING PROJECTS
         const projectIdMappings = {}
 
         // first, create all projects in a flat structure
-        const projects = json.projects // TODO: confirm treatment of ...Object.values(json.completed.projects)
+        const projects = await getEndPoint('projects') // TODO: confirm treatment of ...Object.values(json.completed.projects)
         for (const project of projects) {
             const createdProject = new Project(project.name, null)
             createdProject.task.added = new Date(project.created_at)
