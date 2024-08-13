@@ -14,23 +14,34 @@
             credentials.write('Todoist', 'Todoist User', form.values.apiToken)
         }
 
-        async function getEndPoint(endpoint: string) {
-            const baseUrl = "https://api.todoist.com/rest/v2/"
-		    const url = baseUrl + endpoint
+        async function getEndPoint(resource_types: string) {
+            const url = "https://api.todoist.com/sync/v9/sync"
 
             const request = new URL.FetchRequest()
-            request.method = 'GET'
+            request.method = 'POST'
             request.headers = {
                     Accept: "application/json",
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${credentials.read('Todoist').password}`
                 }
+
+            const data = JSON.stringify({
+                sync_token: "*",
+                resource_types: resource_types
+            })
+
+            request.bodyString = data
             request.url = URL.fromString(url)
 
-
             const response = await request.fetch()
+            
             return JSON.parse(response.bodyString)
         }
+
+        console.log('about to get allProjects')
+        const allProjects = await getEndPoint('["projects"]')
+
+        console.log(JSON.stringify(allProjects))
 
         // START BY CREATING PROJECTS
         const projectIdMappings = {}

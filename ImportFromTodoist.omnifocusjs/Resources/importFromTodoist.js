@@ -47,21 +47,25 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     var credentials = new Credentials();
     var action = new PlugIn.Action(function (selection) {
         return __awaiter(this, void 0, void 0, function () {
-            function getEndPoint(endpoint) {
+            function getEndPoint(resource_types) {
                 return __awaiter(this, void 0, void 0, function () {
-                    var baseUrl, url, request, response;
+                    var url, request, data, response;
                     return __generator(this, function (_a) {
                         switch (_a.label) {
                             case 0:
-                                baseUrl = "https://api.todoist.com/rest/v2/";
-                                url = baseUrl + endpoint;
+                                url = "https://api.todoist.com/sync/v9/sync";
                                 request = new URL.FetchRequest();
-                                request.method = 'GET';
+                                request.method = 'POST';
                                 request.headers = {
                                     Accept: "application/json",
                                     "Content-Type": "application/json",
                                     "Authorization": "Bearer " + credentials.read('Todoist').password
                                 };
+                                data = JSON.stringify({
+                                    sync_token: "*",
+                                    resource_types: resource_types
+                                });
+                                request.bodyString = data;
                                 request.url = URL.fromString(url);
                                 return [4 /*yield*/, request.fetch()];
                             case 1:
@@ -94,7 +98,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 createdTask.addTags(__spreadArray([priorityTags[task.priority]], tagArray, true));
                 return createdTask;
             }
-            var credentialsExist, form, projectIdMappings, projects, _i, projects_1, project, createdProject, _a, _b, completedProject, _c, projects_2, project, omniProject, parent, _d, _e, note, priorityTagGroup, priorityTags, repeatingTag, taskIdMappings, tasks, _loop_1, completedNotes, _f, _g, note, inboxProject;
+            var credentialsExist, form, allProjects, projectIdMappings, projects, _i, projects_1, project, createdProject, _a, _b, completedProject, _c, projects_2, project, omniProject, parent, _d, _e, note, priorityTagGroup, priorityTags, repeatingTag, taskIdMappings, tasks, _loop_1, completedNotes, _f, _g, note, inboxProject;
             return __generator(this, function (_h) {
                 switch (_h.label) {
                     case 0:
@@ -108,9 +112,14 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         credentials.write('Todoist', 'Todoist User', form.values.apiToken);
                         _h.label = 2;
                     case 2:
+                        console.log('about to get allProjects');
+                        return [4 /*yield*/, getEndPoint('["projects"]')];
+                    case 3:
+                        allProjects = _h.sent();
+                        console.log(JSON.stringify(allProjects));
                         projectIdMappings = {};
                         return [4 /*yield*/, getEndPoint('projects')]; // TODO: confirm treatment of ...Object.values(json.completed.projects)
-                    case 3:
+                    case 4:
                         projects = _h.sent() // TODO: confirm treatment of ...Object.values(json.completed.projects)
                         ;
                         for (_i = 0, projects_1 = projects; _i < projects_1.length; _i++) {
