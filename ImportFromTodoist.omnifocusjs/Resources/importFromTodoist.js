@@ -47,31 +47,35 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     var credentials = new Credentials();
     var action = new PlugIn.Action(function (selection) {
         return __awaiter(this, void 0, void 0, function () {
-            function getEndPoint(endpoint, bodyData) {
+            function getEndPoint(endpoint, bodyData, method) {
                 return __awaiter(this, void 0, void 0, function () {
                     var url, request, response;
                     return __generator(this, function (_a) {
                         switch (_a.label) {
                             case 0:
                                 url = "https://api.todoist.com/sync/v9/" + endpoint;
+                                console.log('hitting ' + url);
                                 request = new URL.FetchRequest();
-                                request.method = 'POST';
+                                request.method = method;
                                 request.headers = {
                                     Accept: "application/json",
                                     "Content-Type": "application/json",
                                     "Authorization": "Bearer " + credentials.read('Todoist').password
                                 };
-                                request.bodyString = JSON.stringify(bodyData);
+                                if (method !== 'GET')
+                                    request.bodyString = JSON.stringify(bodyData);
                                 request.url = URL.fromString(url);
                                 return [4 /*yield*/, request.fetch()];
                             case 1:
                                 response = _a.sent();
+                                console.log(JSON.stringify(response));
                                 return [2 /*return*/, JSON.parse(response.bodyString)];
                         }
                     });
                 });
             }
-            var credentialsExist, form, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, _loop_1, _i, _a, project, _b, _c, completedContainer, completedItems;
+            var credentialsExist, form, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, projectIdMappings, processProjects, archivedProjectsData, archiveFolder, _i, _a, completedContainer, completedItemsData, _b, _c, item, newTask;
+            var _this = this;
             return __generator(this, function (_d) {
                 switch (_d.label) {
                     case 0:
@@ -94,112 +98,141 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         };
                         repeatingTag = tagNamed('repeating') || new Tag('repeating', null);
                         bodyData = { sync_token: "*", resource_types: '["projects", "completed_info"]' };
-                        return [4 /*yield*/, getEndPoint('sync', bodyData)];
+                        return [4 /*yield*/, getEndPoint('sync', bodyData, 'POST')];
                     case 3:
                         requestResponse = _d.sent();
                         console.log(JSON.stringify(requestResponse));
-                        _loop_1 = function (project) {
-                            var createdProject, requestData, projectDataResponse, sectionIdMappings, _e, _f, section, createdSection, taskIdMappings, addTask, remainingTasks, _loop_2, state_1;
-                            return __generator(this, function (_g) {
-                                switch (_g.label) {
+                        projectIdMappings = {};
+                        processProjects = function (projects, location) { return __awaiter(_this, void 0, void 0, function () {
+                            var _loop_1, _i, projects_1, project;
+                            return __generator(this, function (_a) {
+                                switch (_a.label) {
                                     case 0:
-                                        createdProject = new Project(project.name, null);
-                                        createdProject.task.added = new Date(project.created_at);
-                                        createdProject.sequential = false;
-                                        requestData = { project_id: project.id };
-                                        return [4 /*yield*/, getEndPoint('projects/get_data', requestData)
-                                            // create sections
-                                        ];
+                                        _loop_1 = function (project) {
+                                            var createdProject, requestData, projectDataResponse, sectionIdMappings, _b, _c, section, createdSection, taskIdMappings, addTask, remainingTasks, _loop_2, state_1;
+                                            return __generator(this, function (_d) {
+                                                switch (_d.label) {
+                                                    case 0:
+                                                        createdProject = new Project(project.name, location);
+                                                        if (project.created_at)
+                                                            createdProject.task.added = new Date(project.created_at); //TODO: note that this is not included
+                                                        createdProject.sequential = false;
+                                                        projectIdMappings[project.id] = createdProject;
+                                                        requestData = { project_id: project.id };
+                                                        return [4 /*yield*/, getEndPoint('projects/get_data', requestData, 'POST')
+                                                            // create sections
+                                                        ];
+                                                    case 1:
+                                                        projectDataResponse = _d.sent();
+                                                        sectionIdMappings = {};
+                                                        for (_b = 0, _c = projectDataResponse.sections; _b < _c.length; _b++) {
+                                                            section = _c[_b];
+                                                            createdSection = new Task(section.name, createdProject);
+                                                            createdSection.added = new Date(section.added_at);
+                                                            sectionIdMappings[section.id] = createdSection;
+                                                            createdSection.sequential = false;
+                                                        }
+                                                        taskIdMappings = {};
+                                                        addTask = function (item) {
+                                                            var taskName = item.description ? item.content + "\n " + item.description : item.content;
+                                                            var location = item.parent_id ? taskIdMappings[item.parent_id] : item.section_id ? sectionIdMappings[item.section_id] : createdProject;
+                                                            var createdTask = new Task(taskName, location);
+                                                            taskIdMappings[item.id] = createdTask;
+                                                            // update task info
+                                                            createdTask.added = new Date(item.added_at);
+                                                            createdTask.sequential = false;
+                                                            if (item.due) {
+                                                                createdTask.dueDate = new Date(item.due.date);
+                                                                if (item.due.is_recurring) {
+                                                                    createdTask.addTag(repeatingTag);
+                                                                    createdTask.appendStringToNote("REPEATING: " + item.due.string + "\n\n");
+                                                                }
+                                                            }
+                                                            // add tags
+                                                            createdTask.removeTags(createdTask.tags); // first remove any existing tags that might have been inherited from the parent
+                                                            var tagArray = item.labels.map(function (label) { return flattenedTags.byName(label) || new Tag(label, null); });
+                                                            createdTask.addTags(__spreadArray([priorityTags[item.priority]], tagArray, true));
+                                                            // if (task.completed_at) createdTask.markComplete(new Date(task.completed_at)) // TODO: completed tasks
+                                                        };
+                                                        remainingTasks = projectDataResponse.items;
+                                                        _loop_2 = function () {
+                                                            var tasksToRemove = [];
+                                                            for (var i = 0; i < remainingTasks.length; i++) {
+                                                                var task = remainingTasks[i];
+                                                                if (!task.parent_id || task.parent_id in taskIdMappings) {
+                                                                    addTask(task); // add task
+                                                                    tasksToRemove.push(i);
+                                                                }
+                                                            }
+                                                            // fallback to stop us getting stuck in infinite loop - add any remaining tasks to root of project
+                                                            if (tasksToRemove.length === 0) {
+                                                                for (var _e = 0, remainingTasks_1 = remainingTasks; _e < remainingTasks_1.length; _e++) {
+                                                                    var task = remainingTasks_1[_e];
+                                                                    addTask(task);
+                                                                }
+                                                                return "break";
+                                                            }
+                                                            // Filter out tasks that have been added
+                                                            remainingTasks = remainingTasks.filter(function (_, index) { return !tasksToRemove.includes(index); });
+                                                        };
+                                                        while (remainingTasks.length > 0) {
+                                                            state_1 = _loop_2();
+                                                            if (state_1 === "break")
+                                                                break;
+                                                        }
+                                                        return [2 /*return*/];
+                                                }
+                                            });
+                                        };
+                                        _i = 0, projects_1 = projects;
+                                        _a.label = 1;
                                     case 1:
-                                        projectDataResponse = _g.sent();
-                                        sectionIdMappings = {};
-                                        for (_e = 0, _f = projectDataResponse.sections; _e < _f.length; _e++) {
-                                            section = _f[_e];
-                                            createdSection = new Task(section.name, createdProject);
-                                            createdSection.added = new Date(section.added_at);
-                                            sectionIdMappings[section.id] = createdSection;
-                                            createdSection.sequential = false;
-                                        }
-                                        taskIdMappings = {};
-                                        addTask = function (item) {
-                                            var taskName = item.description ? item.content + "\n " + item.description : item.content;
-                                            var location = item.parent_id ? taskIdMappings[item.parent_id] : item.section_id ? sectionIdMappings[item.section_id] : createdProject;
-                                            var createdTask = new Task(taskName, location);
-                                            taskIdMappings[item.id] = createdTask;
-                                            // update task info
-                                            createdTask.added = new Date(item.added_at);
-                                            createdTask.sequential = false;
-                                            if (item.due) {
-                                                createdTask.dueDate = new Date(item.due.date);
-                                                if (item.due.is_recurring) {
-                                                    createdTask.addTag(repeatingTag);
-                                                    createdTask.appendStringToNote("REPEATING: " + item.due.string + "\n\n");
-                                                }
-                                            }
-                                            // add tags
-                                            createdTask.removeTags(createdTask.tags); // first remove any existing tags that might have been inherited from the parent
-                                            var tagArray = item.labels.map(function (label) { return flattenedTags.byName(label) || new Tag(label, null); });
-                                            createdTask.addTags(__spreadArray([priorityTags[item.priority]], tagArray, true));
-                                            // if (task.completed_at) createdTask.markComplete(new Date(task.completed_at)) // TODO: completed tasks
-                                        };
-                                        remainingTasks = projectDataResponse.items;
-                                        _loop_2 = function () {
-                                            var tasksToRemove = [];
-                                            for (var i = 0; i < remainingTasks.length; i++) {
-                                                var task = remainingTasks[i];
-                                                if (!task.parent_id || task.parent_id in taskIdMappings) {
-                                                    addTask(task); // add task
-                                                    tasksToRemove.push(i);
-                                                }
-                                            }
-                                            // fallback to stop us getting stuck in infinite loop - add any remaining tasks to root of project
-                                            if (tasksToRemove.length === 0) {
-                                                for (var _h = 0, remainingTasks_1 = remainingTasks; _h < remainingTasks_1.length; _h++) {
-                                                    var task = remainingTasks_1[_h];
-                                                    addTask(task);
-                                                }
-                                                return "break";
-                                            }
-                                            // Filter out tasks that have been added
-                                            remainingTasks = remainingTasks.filter(function (_, index) { return !tasksToRemove.includes(index); });
-                                        };
-                                        while (remainingTasks.length > 0) {
-                                            state_1 = _loop_2();
-                                            if (state_1 === "break")
-                                                break;
-                                        }
-                                        return [2 /*return*/];
+                                        if (!(_i < projects_1.length)) return [3 /*break*/, 4];
+                                        project = projects_1[_i];
+                                        return [5 /*yield**/, _loop_1(project)];
+                                    case 2:
+                                        _a.sent();
+                                        _a.label = 3;
+                                    case 3:
+                                        _i++;
+                                        return [3 /*break*/, 1];
+                                    case 4: return [2 /*return*/];
                                 }
                             });
-                        };
-                        _i = 0, _a = requestResponse.projects;
-                        _d.label = 4;
+                        }); };
+                        return [4 /*yield*/, processProjects(requestResponse.projects, null)];
                     case 4:
-                        if (!(_i < _a.length)) return [3 /*break*/, 7];
-                        project = _a[_i];
-                        return [5 /*yield**/, _loop_1(project)];
-                    case 5:
                         _d.sent();
-                        _d.label = 6;
+                        return [4 /*yield*/, getEndPoint('projects/get_archived', null, 'GET')]; //TODO: deal with more than 500
+                    case 5:
+                        archivedProjectsData = _d.sent() //TODO: deal with more than 500
+                        ;
+                        archiveFolder = new Folder('Archive', null);
+                        return [4 /*yield*/, processProjects(archivedProjectsData, archiveFolder)
+                            // now consider completed tasks
+                        ];
                     case 6:
-                        _i++;
-                        return [3 /*break*/, 4];
+                        _d.sent();
+                        _i = 0, _a = requestResponse.completed_info;
+                        _d.label = 7;
                     case 7:
-                        _b = 0, _c = requestResponse.completed_info;
-                        _d.label = 8;
-                    case 8:
-                        if (!(_b < _c.length)) return [3 /*break*/, 11];
-                        completedContainer = _c[_b];
+                        if (!(_i < _a.length)) return [3 /*break*/, 10];
+                        completedContainer = _a[_i];
                         console.log(JSON.stringify(completedContainer));
-                        return [4 /*yield*/, getEndPoint('archive/items', { project_id: completedContainer.project_id })];
+                        return [4 /*yield*/, getEndPoint("archive/items?project_id=" + completedContainer.project_id, null, 'GET')];
+                    case 8:
+                        completedItemsData = _d.sent();
+                        console.log(JSON.stringify(completedItemsData));
+                        for (_b = 0, _c = completedItemsData.items; _b < _c.length; _b++) {
+                            item = _c[_b];
+                            newTask = new Task(item.content, projectIdMappings[item.project_id]);
+                            newTask.markComplete(null); //FIXME: add date
+                        }
+                        _d.label = 9;
                     case 9:
-                        completedItems = _d.sent();
-                        console.log(JSON.stringify(completedItems));
-                        _d.label = 10;
-                    case 10:
-                        _b++;
-                        return [3 /*break*/, 8];
-                    case 11: return [2 /*return*/];
+                        _i++;
+                        return [3 /*break*/, 7];
+                    case 10: return [2 /*return*/];
                 }
             });
         });
