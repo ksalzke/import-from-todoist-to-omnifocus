@@ -14,8 +14,8 @@
             credentials.write('Todoist', 'Todoist User', form.values.apiToken)
         }
 
-        async function getEndPoint(resource_types: string) {
-            const url = "https://api.todoist.com/sync/v9/sync"
+        async function getEndPoint(endpoint: string, bodyData) {
+            const url = `https://api.todoist.com/sync/v9/${endpoint}`
 
             const request = new URL.FetchRequest()
             request.method = 'POST'
@@ -24,13 +24,7 @@
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${credentials.read('Todoist').password}`
                 }
-
-            const data = JSON.stringify({
-                sync_token: "*",
-                resource_types: resource_types
-            })
-
-            request.bodyString = data
+            request.bodyString = JSON.stringify(bodyData)
             request.url = URL.fromString(url)
 
             const response = await request.fetch()
@@ -38,18 +32,38 @@
             return JSON.parse(response.bodyString)
         }
 
+
+   
+
         console.log('about to get allProjects')
-        const allProjects = await getEndPoint('["projects"]')
+        const bodyData = {sync_token: "*", resource_types: '["projects"]'}
+        const allProjectsResponse = await getEndPoint('sync', bodyData)
+        
+        for (const project of allProjectsResponse.projects) { //TODO: include archived projects
+            const createdProject = new Project(project.name, null)
+            createdProject.task.added = new Date(project.created_at)
+            createdProject.sequential = false
 
-        console.log(JSON.stringify(allProjects))
+            //TODO: consider project notes - need to use /projects/get 'Get project info' if more than 10 notes
 
+            // get project data
+            //const projectDataResponse = 
+
+
+        }
+
+
+
+        /* 
         // START BY CREATING PROJECTS
         const projectIdMappings = {}
 
+
+                    
         // first, create all projects in a flat structure
         const projects = await getEndPoint('projects') // TODO: confirm treatment of ...Object.values(json.completed.projects)
         for (const project of projects) {
-            const createdProject = new Project(project.name, null)
+            
             createdProject.task.added = new Date(project.created_at)
             projectIdMappings[project.id] = createdProject.task
             createdProject.sequential = false
@@ -153,7 +167,7 @@
                 moveTasks([omniTask], parent)
             }
         }
-            */
+        ------------
 
         // add notes to tasks
         const completedNotes = json.completed.items.flatMap(item => item.notes)
@@ -165,6 +179,8 @@
         const inboxProject = projectNamed("Inbox")
         moveTasks(inboxProject.tasks, inbox.ending)
         deleteObject(inboxProject)
+
+        */
 
     })
 

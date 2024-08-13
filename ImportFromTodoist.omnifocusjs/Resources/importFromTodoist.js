@@ -34,26 +34,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
 (function () {
     var credentials = new Credentials();
     var action = new PlugIn.Action(function (selection) {
         return __awaiter(this, void 0, void 0, function () {
-            function getEndPoint(resource_types) {
+            function getEndPoint(endpoint, bodyData) {
                 return __awaiter(this, void 0, void 0, function () {
-                    var url, request, data, response;
+                    var url, request, response;
                     return __generator(this, function (_a) {
                         switch (_a.label) {
                             case 0:
-                                url = "https://api.todoist.com/sync/v9/sync";
+                                url = "https://api.todoist.com/sync/v9/" + endpoint;
                                 request = new URL.FetchRequest();
                                 request.method = 'POST';
                                 request.headers = {
@@ -61,11 +52,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                     "Content-Type": "application/json",
                                     "Authorization": "Bearer " + credentials.read('Todoist').password
                                 };
-                                data = JSON.stringify({
-                                    sync_token: "*",
-                                    resource_types: resource_types
-                                });
-                                request.bodyString = data;
+                                request.bodyString = JSON.stringify(bodyData);
                                 request.url = URL.fromString(url);
                                 return [4 /*yield*/, request.fetch()];
                             case 1:
@@ -75,32 +62,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
-            function addTask(task, location) {
-                // create task and save ID mapping for later
-                var taskName = task.description ? task.content + "\n " + task.description : task.content;
-                var createdTask = new Task(taskName, location || projectIdMappings[task.project_id]);
-                taskIdMappings[task.id] = createdTask;
-                // update task info
-                createdTask.added = new Date(task.added_at);
-                createdTask.sequential = false;
-                if (task.due) {
-                    createdTask.dueDate = new Date(task.due.date);
-                    if (task.due.is_recurring) {
-                        createdTask.addTag(repeatingTag);
-                        createdTask.appendStringToNote("REPEATING: " + task.due.string + "\n\n");
-                    }
-                }
-                if (task.completed_at)
-                    createdTask.markComplete(new Date(task.completed_at));
-                // add tags
-                createdTask.removeTags(createdTask.tags); // first remove any existing tags that might have been inherited from the parent
-                var tagArray = task.labels.map(function (label) { return flattenedTags.byName(label) || new Tag(label, null); });
-                createdTask.addTags(__spreadArray([priorityTags[task.priority]], tagArray, true));
-                return createdTask;
-            }
-            var credentialsExist, form, allProjects, projectIdMappings, projects, _i, projects_1, project, createdProject, _a, _b, completedProject, _c, projects_2, project, omniProject, parent, _d, _e, note, priorityTagGroup, priorityTags, repeatingTag, taskIdMappings, tasks, _loop_1, completedNotes, _f, _g, note, inboxProject;
-            return __generator(this, function (_h) {
-                switch (_h.label) {
+            var credentialsExist, form, bodyData, allProjectsResponse, _i, _a, project, createdProject;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
                         credentialsExist = credentials.read('Todoist');
                         if (!!credentialsExist) return [3 /*break*/, 2];
@@ -108,80 +72,24 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         form.addField(new Form.Field.String('apiToken', 'API Token', null, null), null);
                         return [4 /*yield*/, form.show('Enter Todoist API Token', 'Continue')];
                     case 1:
-                        _h.sent();
+                        _b.sent();
                         credentials.write('Todoist', 'Todoist User', form.values.apiToken);
-                        _h.label = 2;
+                        _b.label = 2;
                     case 2:
                         console.log('about to get allProjects');
-                        return [4 /*yield*/, getEndPoint('["projects"]')];
+                        bodyData = { sync_token: "*", resource_types: '["projects"]' };
+                        return [4 /*yield*/, getEndPoint('sync', bodyData)];
                     case 3:
-                        allProjects = _h.sent();
-                        console.log(JSON.stringify(allProjects));
-                        projectIdMappings = {};
-                        return [4 /*yield*/, getEndPoint('projects')]; // TODO: confirm treatment of ...Object.values(json.completed.projects)
-                    case 4:
-                        projects = _h.sent() // TODO: confirm treatment of ...Object.values(json.completed.projects)
-                        ;
-                        for (_i = 0, projects_1 = projects; _i < projects_1.length; _i++) {
-                            project = projects_1[_i];
+                        allProjectsResponse = _b.sent();
+                        for (_i = 0, _a = allProjectsResponse.projects; _i < _a.length; _i++) { //TODO: include archived projects
+                            project = _a[_i];
                             createdProject = new Project(project.name, null);
                             createdProject.task.added = new Date(project.created_at);
-                            projectIdMappings[project.id] = createdProject.task;
                             createdProject.sequential = false;
+                            //TODO: consider project notes - need to use /projects/get 'Get project info' if more than 10 notes
+                            // get project data
+                            //const projectDataResponse = 
                         }
-                        // mark any completed projects complete
-                        for (_a = 0, _b = json.completed.projects; _a < _b.length; _a++) {
-                            completedProject = _b[_a];
-                            projectIdMappings[completedProject.id].markComplete(new Date(completedProject.updated_at));
-                        }
-                        // move any nested projects to the correct place
-                        for (_c = 0, projects_2 = projects; _c < projects_2.length; _c++) {
-                            project = projects_2[_c];
-                            if (project.parent_id) {
-                                omniProject = projectIdMappings[project.id];
-                                parent = projectIdMappings[project.parent_id];
-                                moveTasks([omniProject], parent);
-                            }
-                        }
-                        // add project notes
-                        for (_d = 0, _e = json.project_notes; _d < _e.length; _d++) {
-                            note = _e[_d];
-                            projectIdMappings[note.project_id].note = projectIdMappings[note.project_id].note + ("\n\n " + note.posted_at + ": " + note.content + " " + (note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''));
-                        }
-                        priorityTagGroup = tagNamed('Priority') || new Tag('Priority', null);
-                        priorityTags = {
-                            1: new Tag("Priority 1", priorityTagGroup),
-                            2: new Tag("Priority 2", priorityTagGroup),
-                            3: new Tag("Priority 3", priorityTagGroup),
-                            4: new Tag("Priority 4", priorityTagGroup)
-                        };
-                        repeatingTag = new Tag('repeating', null);
-                        taskIdMappings = {};
-                        tasks = __spreadArray(__spreadArray([], json.items, true), json.completed.items.map(function (task) { return task.item_object; }), true);
-                        _loop_1 = function () {
-                            var tasksToRemove = [];
-                            for (var i = 0; i < tasks.length; i++) {
-                                var task = tasks[i];
-                                if (!task.parent_id || task.parent_id in taskIdMappings) {
-                                    addTask(task, taskIdMappings[task.parent_id]); // add task
-                                    tasksToRemove.push(i);
-                                }
-                            }
-                            // Filter out tasks that have been added
-                            tasks = tasks.filter(function (_, index) { return !tasksToRemove.includes(index); });
-                        };
-                        // APPROACH 1: only add once parent exists, loop through
-                        while (tasks.length > 0) {
-                            _loop_1();
-                        }
-                        completedNotes = json.completed.items.flatMap(function (item) { return item.notes; });
-                        for (_f = 0, _g = __spreadArray(__spreadArray([], json.notes, true), completedNotes, true); _f < _g.length; _f++) {
-                            note = _g[_f];
-                            taskIdMappings[note.item_id].note = taskIdMappings[note.item_id].note + ("\n\n " + note.posted_at + ": " + note.content + " " + (note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''));
-                        }
-                        inboxProject = projectNamed("Inbox");
-                        moveTasks(inboxProject.tasks, inbox.ending);
-                        deleteObject(inboxProject);
                         return [2 /*return*/];
                 }
             });
