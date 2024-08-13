@@ -33,62 +33,7 @@
         }
 
 
-   
-
-        console.log('about to get allProjects')
-        const bodyData = {sync_token: "*", resource_types: '["projects"]'}
-        const allProjectsResponse = await getEndPoint('sync', bodyData)
-        
-        for (const project of allProjectsResponse.projects) { //TODO: include archived projects
-            const createdProject = new Project(project.name, null)
-            createdProject.task.added = new Date(project.created_at)
-            createdProject.sequential = false
-
-            //TODO: consider project notes - need to use /projects/get 'Get project info' if more than 10 notes
-
-            // get project data
-            //const projectDataResponse = 
-
-
-        }
-
-
-
-        /* 
-        // START BY CREATING PROJECTS
-        const projectIdMappings = {}
-
-
-                    
-        // first, create all projects in a flat structure
-        const projects = await getEndPoint('projects') // TODO: confirm treatment of ...Object.values(json.completed.projects)
-        for (const project of projects) {
-            
-            createdProject.task.added = new Date(project.created_at)
-            projectIdMappings[project.id] = createdProject.task
-            createdProject.sequential = false
-        } 
-
-        // mark any completed projects complete
-        for (const completedProject of json.completed.projects) {
-            projectIdMappings[completedProject.id].markComplete(new Date(completedProject.updated_at))
-        }
-
-        // move any nested projects to the correct place
-        for (const project of projects) {
-            if (project.parent_id) {
-                const omniProject = projectIdMappings[project.id]
-                const parent = projectIdMappings[project.parent_id]
-                moveTasks([omniProject], parent)
-            }
-        }
-
-        // add project notes
-        for (const note of json.project_notes) {
-            projectIdMappings[note.project_id].note = projectIdMappings[note.project_id].note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
-        }
-
-        // CREATE PRIORITY TAGS
+        // CREATE TAGS
         const priorityTagGroup = tagNamed('Priority') || new Tag('Priority', null)
         const priorityTags = {
             1: new Tag("Priority 1", priorityTagGroup),
@@ -97,43 +42,113 @@
             4: new Tag("Priority 4", priorityTagGroup)
 
         }
-        const repeatingTag = new Tag('repeating', null)
+        const repeatingTag = tagNamed('repeating') || new Tag('repeating', null)
+   
+        const bodyData = {sync_token: "*", resource_types: '["projects", "completed_info"]'}
+        const requestResponse = await getEndPoint('sync', bodyData)
         
-        // CONTINUE BY CREATING TASKS
-        const taskIdMappings = {}
+        console.log(JSON.stringify(requestResponse))
+        
+        for (const project of requestResponse.projects) { //TODO: include archived projects
 
-        // first, create all projects in a flat structure
-        let tasks = [...json.items, ...json.completed.items.map(task => task.item_object)]
+            // get and create projects
+            const createdProject = new Project(project.name, null)
+            createdProject.task.added = new Date(project.created_at)
+            createdProject.sequential = false
 
-        function addTask (task, location) {
-            // create task and save ID mapping for later
-            const taskName = task.description ? `${task.content}\n ${task.description}` : task.content
-            const createdTask = new Task(taskName, location || projectIdMappings[task.project_id] )
-            taskIdMappings[task.id] = createdTask
+            //TODO: consider project notes - need to use /projects/get 'Get project info' if more than 10 notes
 
-            // update task info
-            createdTask.added = new Date(task.added_at)
-            createdTask.sequential = false
-            if (task.due) {
-                createdTask.dueDate = new Date(task.due.date)
-                if (task.due.is_recurring) {
-                    createdTask.addTag(repeatingTag)
-                    createdTask.appendStringToNote(`REPEATING: ${task.due.string}\n\n`)
-                }
-                
+            // get sections and items
+            const requestData = {project_id: project.id}
+            const projectDataResponse = await getEndPoint('projects/get_data', requestData)
+
+            // create sections
+            let sectionIdMappings = {}
+            for (const section of projectDataResponse.sections) {
+                const createdSection = new Task(section.name, createdProject)
+                createdSection.added = new Date(section.added_at)
+                sectionIdMappings[section.id] = createdSection
+                createdSection.sequential = false
             }
 
-            if (task.completed_at) createdTask.markComplete(new Date(task.completed_at))
+            // create tasks/items
+            let taskIdMappings = {}
+
+            const addTask = (item) => {
+                const taskName = item.description ? `${item.content}\n ${item.description}` : item.content
+                const location = item.parent_id ? taskIdMappings[item.parent_id] : item.section_id ? sectionIdMappings[item.section_id] : createdProject
+                const createdTask = new Task(taskName, location)
+                taskIdMappings[item.id] = createdTask
+
+                // update task info
+                createdTask.added = new Date(item.added_at)
+                createdTask.sequential = false
+                if (item.due) {
+                    createdTask.dueDate = new Date(item.due.date)
+                    if (item.due.is_recurring) {
+                        createdTask.addTag(repeatingTag)
+                        createdTask.appendStringToNote(`REPEATING: ${item.due.string}\n\n`)
+                    }
+                }
+
+                // add tags
+                createdTask.removeTags(createdTask.tags) // first remove any existing tags that might have been inherited from the parent
+                const tagArray = item.labels.map(label => flattenedTags.byName(label) || new Tag(label, null))
+                createdTask.addTags([priorityTags[item.priority], ...tagArray])
+
+                // if (task.completed_at) createdTask.markComplete(new Date(task.completed_at)) // TODO: completed tasks
+            }
+
+            let remainingTasks = projectDataResponse.items
+            while (remainingTasks.length > 0) {
+                const tasksToRemove: number[] = [];
             
-            // add tags
-            createdTask.removeTags(createdTask.tags) // first remove any existing tags that might have been inherited from the parent
-
-            const tagArray = task.labels.map(label => flattenedTags.byName(label) || new Tag(label, null))
-            createdTask.addTags([priorityTags[task.priority], ...tagArray])
-
-            return createdTask
+                for (let i = 0; i < remainingTasks.length; i++) {
+                    const task = remainingTasks[i];
+                    if (!task.parent_id || task.parent_id in taskIdMappings) {
+                        addTask(task); // add task
+                        tasksToRemove.push(i);
+                    }
+                }
+            
+                // fallback to stop us getting stuck in infinite loop - add any remaining tasks to root of project
+                if (tasksToRemove.length === 0) {
+                    for (const task of remainingTasks) addTask(task)
+                    break
+                }
+                // Filter out tasks that have been added
+                remainingTasks = remainingTasks.filter((_, index) => !tasksToRemove.includes(index));
+            } 
         }
 
+        // now consider completed tasks
+        for (const completedContainer of requestResponse.completed_info) {
+            console.log(JSON.stringify(completedContainer))
+
+            // FIXME: currently assumes project but could return section or item
+            const completedItems = await getEndPoint('archive/items', {project_id: completedContainer.project_id})
+            console.log(JSON.stringify(completedItems))
+            /* for (const item of completedItems) {
+                // TODO: add details
+                const newTask = new Task(new Task())
+            } */
+
+        }
+
+        /* 
+
+
+        // mark any completed projects complete
+        for (const completedProject of json.completed.projects) {
+            projectIdMappings[completedProject.id].markComplete(new Date(completedProject.updated_at))
+        }
+
+        // add project notes
+        for (const note of json.project_notes) {
+            projectIdMappings[note.project_id].note = projectIdMappings[note.project_id].note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
+        }
+
+    
         
         // APPROACH 1: only add once parent exists, loop through
 
