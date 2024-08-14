@@ -17,7 +17,6 @@
 
         async function getEndPoint(endpoint: string, bodyData, method: string) {
             const url = `https://api.todoist.com/sync/v9/${endpoint}`
-            console.log('hitting ' + url)
 
             const request = new URL.FetchRequest()
             request.method = method
@@ -30,7 +29,6 @@
             request.url = URL.fromString(url)
 
             const response = await request.fetch()
-            // console.log(JSON.stringify(response))
             
             return JSON.parse(response.bodyString)
         }
@@ -225,10 +223,8 @@
 
         const ARCH_PROJ_PAGE_SIZE = 500
         async function getArchived (offset = 0) {
-            console.log('getArchive called')
             const requestBody = {limit: ARCH_PROJ_PAGE_SIZE, offset: offset}
-            let page = await getEndPoint('projects/get_archived', requestBody, 'POST') // FIXME: perhaps should be post??
-            console.log(page)
+            let page = await getEndPoint('projects/get_archived', requestBody, 'POST')
 
             if (page.length > 0) {
                 const remainder = await getArchived(offset + ARCH_PROJ_PAGE_SIZE);

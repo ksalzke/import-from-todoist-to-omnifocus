@@ -54,7 +54,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         switch (_a.label) {
                             case 0:
                                 url = "https://api.todoist.com/sync/v9/" + endpoint;
-                                console.log('hitting ' + url);
                                 request = new URL.FetchRequest();
                                 request.method = method;
                                 request.headers = {
@@ -65,12 +64,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                 if (method !== 'GET')
                                     request.bodyString = JSON.stringify(bodyData);
                                 request.url = URL.fromString(url);
-                                return [4 /*yield*/, request.fetch()
-                                    // console.log(JSON.stringify(response))
-                                ];
+                                return [4 /*yield*/, request.fetch()];
                             case 1:
                                 response = _a.sent();
-                                // console.log(JSON.stringify(response))
                                 return [2 /*return*/, JSON.parse(response.bodyString)];
                         }
                     });
@@ -132,13 +128,10 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     return __generator(this, function (_a) {
                         switch (_a.label) {
                             case 0:
-                                console.log('getArchive called');
                                 requestBody = { limit: ARCH_PROJ_PAGE_SIZE, offset: offset };
-                                return [4 /*yield*/, getEndPoint('projects/get_archived', requestBody, 'POST')]; // FIXME: perhaps should be post??
+                                return [4 /*yield*/, getEndPoint('projects/get_archived', requestBody, 'POST')];
                             case 1:
-                                page = _a.sent() // FIXME: perhaps should be post??
-                                ;
-                                console.log(page);
+                                page = _a.sent();
                                 if (!(page.length > 0)) return [3 /*break*/, 3];
                                 return [4 /*yield*/, getArchived(offset + ARCH_PROJ_PAGE_SIZE)];
                             case 2:
