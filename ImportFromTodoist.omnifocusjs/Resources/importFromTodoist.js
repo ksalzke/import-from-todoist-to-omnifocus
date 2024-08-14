@@ -125,7 +125,31 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
-            var credentialsExist, form, ARCH_MAX_PAGE_SIZE, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, COMPL_MAX_PAGE_SIZE, completedRequest, notesByItemId, projectsContainingCompletedTasks, projectIdMappings, processProjects, archivedProjectsData, archiveFolder, inboxProject;
+            function getArchived(offset) {
+                if (offset === void 0) { offset = 0; }
+                return __awaiter(this, void 0, void 0, function () {
+                    var requestBody, page, remainder;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                console.log('getArchive called');
+                                requestBody = { limit: ARCH_PROJ_PAGE_SIZE, offset: offset };
+                                return [4 /*yield*/, getEndPoint('projects/get_archived', requestBody, 'POST')]; // FIXME: perhaps should be post??
+                            case 1:
+                                page = _a.sent() // FIXME: perhaps should be post??
+                                ;
+                                console.log(page);
+                                if (!(page.length > 0)) return [3 /*break*/, 3];
+                                return [4 /*yield*/, getArchived(offset + ARCH_PROJ_PAGE_SIZE)];
+                            case 2:
+                                remainder = _a.sent();
+                                return [2 /*return*/, __spreadArray(__spreadArray([], page, true), remainder, true)];
+                            case 3: return [2 /*return*/, page];
+                        }
+                    });
+                });
+            }
+            var credentialsExist, form, ARCH_MAX_PAGE_SIZE, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, COMPL_MAX_PAGE_SIZE, completedRequest, notesByItemId, projectsContainingCompletedTasks, projectIdMappings, processProjects, ARCH_PROJ_PAGE_SIZE, archivedProjectsData, archiveFolder, inboxProject;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -342,11 +366,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         return [4 /*yield*/, processProjects(requestResponse.projects, null)];
                     case 5:
                         _a.sent();
-                        return [4 /*yield*/, getEndPoint('projects/get_archived', null, 'GET')]; //TODO: deal with more than 500
+                        ARCH_PROJ_PAGE_SIZE = 500;
+                        return [4 /*yield*/, getArchived()];
                     case 6:
-                        archivedProjectsData = _a.sent() //TODO: deal with more than 500
-                        ;
-                        archiveFolder = new Folder('Archive', null);
+                        archivedProjectsData = _a.sent();
+                        archiveFolder = folderNamed('Archive') || new Folder('Archive', null);
                         return [4 /*yield*/, processProjects(archivedProjectsData, archiveFolder)
                             // deal with inbox project (at end)
                         ];

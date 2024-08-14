@@ -221,11 +221,28 @@
         }
 
         await processProjects(requestResponse.projects, null)
+
+
+        const ARCH_PROJ_PAGE_SIZE = 500
+        async function getArchived (offset = 0) {
+            console.log('getArchive called')
+            const requestBody = {limit: ARCH_PROJ_PAGE_SIZE, offset: offset}
+            let page = await getEndPoint('projects/get_archived', requestBody, 'POST') // FIXME: perhaps should be post??
+            console.log(page)
+
+            if (page.length > 0) {
+                const remainder = await getArchived(offset + ARCH_PROJ_PAGE_SIZE);
+                return [...page, ...remainder]
+              } else {
+                return page;
+              }
+        }
+
         
-        const archivedProjectsData = await getEndPoint('projects/get_archived', null, 'GET') //TODO: deal with more than 500
+        const archivedProjectsData = await getArchived()
 
 
-        const archiveFolder = new Folder('Archive', null)
+        const archiveFolder = folderNamed('Archive') || new Folder('Archive', null)
         await processProjects(archivedProjectsData, archiveFolder)
         
         // deal with inbox project (at end)
