@@ -178,9 +178,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                     });
                                                 });
                                             }
-                                            var taskIdMappings, createdProject, requestData, projectDataResponse, sectionIdMappings, _b, _c, section, createdSection, completedItemsData, remainingTasks, _loop_2, state_1, completedItemsData;
-                                            return __generator(this, function (_d) {
-                                                switch (_d.label) {
+                                            var taskIdMappings, createdProject, requestData, projectDataResponse, _b, _c, note, sectionIdMappings, _d, _e, section, createdSection, completedItemsData, remainingTasks, _loop_2, state_1, completedItemsData;
+                                            return __generator(this, function (_f) {
+                                                switch (_f.label) {
                                                     case 0:
                                                         taskIdMappings = {};
                                                         createdProject = new Project(project.name, location);
@@ -190,16 +190,21 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                         projectIdMappings[project.id] = createdProject;
                                                         requestData = { project_id: project.id };
                                                         return [4 /*yield*/, getEndPoint('projects/get_data', requestData, 'POST')
-                                                            // create sections
+                                                            // add project notes
                                                         ];
                                                     case 1:
-                                                        projectDataResponse = _d.sent();
+                                                        projectDataResponse = _f.sent();
+                                                        // add project notes
+                                                        for (_b = 0, _c = projectDataResponse.project_notes; _b < _c.length; _b++) {
+                                                            note = _c[_b];
+                                                            projectIdMappings[note.project_id].note = projectIdMappings[note.project_id].note + ("\n\n " + note.posted_at + ": " + note.content + " " + (note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''));
+                                                        }
                                                         sectionIdMappings = {};
-                                                        _b = 0, _c = projectDataResponse.sections;
-                                                        _d.label = 2;
+                                                        _d = 0, _e = projectDataResponse.sections;
+                                                        _f.label = 2;
                                                     case 2:
-                                                        if (!(_b < _c.length)) return [3 /*break*/, 6];
-                                                        section = _c[_b];
+                                                        if (!(_d < _e.length)) return [3 /*break*/, 6];
+                                                        section = _e[_d];
                                                         createdSection = new Task(section.name, createdProject);
                                                         createdSection.added = new Date(section.added_at);
                                                         sectionIdMappings[section.id] = createdSection;
@@ -207,14 +212,14 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                         if (!section.is_archived) return [3 /*break*/, 5];
                                                         return [4 /*yield*/, getEndPoint("archive/items?section_id=" + section.id, null, 'GET')];
                                                     case 3:
-                                                        completedItemsData = _d.sent();
+                                                        completedItemsData = _f.sent();
                                                         console.log(JSON.stringify(completedItemsData));
                                                         return [4 /*yield*/, processItemsAndMarkComplete(completedItemsData)];
                                                     case 4:
-                                                        _d.sent();
-                                                        _d.label = 5;
+                                                        _f.sent();
+                                                        _f.label = 5;
                                                     case 5:
-                                                        _b++;
+                                                        _d++;
                                                         return [3 /*break*/, 2];
                                                     case 6:
                                                         remainingTasks = projectDataResponse.items;
@@ -229,8 +234,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             }
                                                             // fallback to stop us getting stuck in infinite loop - add any remaining tasks to root of project
                                                             if (tasksToRemove.length === 0) {
-                                                                for (var _e = 0, remainingTasks_1 = remainingTasks; _e < remainingTasks_1.length; _e++) {
-                                                                    var task = remainingTasks_1[_e];
+                                                                for (var _g = 0, remainingTasks_1 = remainingTasks; _g < remainingTasks_1.length; _g++) {
+                                                                    var task = remainingTasks_1[_g];
                                                                     addTask(task);
                                                                 }
                                                                 return "break";
@@ -246,11 +251,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                         if (!(projectsContainingCompletedTasks.includes(project.id) || project.is_archived)) return [3 /*break*/, 9];
                                                         return [4 /*yield*/, getEndPoint("archive/items?project_id=" + project.id, null, 'GET')];
                                                     case 7:
-                                                        completedItemsData = _d.sent();
+                                                        completedItemsData = _f.sent();
                                                         return [4 /*yield*/, processItemsAndMarkComplete(completedItemsData)];
                                                     case 8:
-                                                        _d.sent();
-                                                        _d.label = 9;
+                                                        _f.sent();
+                                                        _f.label = 9;
                                                     case 9: return [2 /*return*/];
                                                 }
                                             });
@@ -281,10 +286,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         archiveFolder = new Folder('Archive', null);
                         return [4 /*yield*/, processProjects(archivedProjectsData, archiveFolder)
                             /*
-                            // add project notes
-                            for (const note of json.project_notes) {
-                                projectIdMappings[note.project_id].note = projectIdMappings[note.project_id].note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
-                            }
+                            
                     
                             // add notes to tasks
                             const completedNotes = json.completed.items.flatMap(item => item.notes)

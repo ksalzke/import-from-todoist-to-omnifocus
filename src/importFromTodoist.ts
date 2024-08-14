@@ -78,6 +78,11 @@
                 // get sections and items
                 const requestData = {project_id: project.id}
                 const projectDataResponse = await getEndPoint('projects/get_data', requestData, 'POST')
+
+                // add project notes
+                for (const note of projectDataResponse.project_notes) {
+                    projectIdMappings[note.project_id].note = projectIdMappings[note.project_id].note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
+                }
     
                 // create sections
                 let sectionIdMappings = {}
@@ -187,10 +192,7 @@
         await processProjects(archivedProjectsData, archiveFolder)
 
         /*
-        // add project notes
-        for (const note of json.project_notes) {
-            projectIdMappings[note.project_id].note = projectIdMappings[note.project_id].note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
-        }
+        
 
         // add notes to tasks
         const completedNotes = json.completed.items.flatMap(item => item.notes)
