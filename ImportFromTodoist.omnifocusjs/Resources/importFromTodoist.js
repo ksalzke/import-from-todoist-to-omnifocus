@@ -74,7 +74,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
-            var credentialsExist, form, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, projectsContainingCompletedTasks, sectionsContainingCompletedTasks, itemsContainingCompletedTasks, projectIdMappings, processProjects, archivedProjectsData, archiveFolder;
+            var credentialsExist, form, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, projectsContainingCompletedTasks, sectionsContainingCompletedTasks, itemsContainingCompletedTasks, projectIdMappings, processProjects, archivedProjectsData, archiveFolder, inboxProject;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -280,89 +280,26 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         ;
                         archiveFolder = new Folder('Archive', null);
                         return [4 /*yield*/, processProjects(archivedProjectsData, archiveFolder)
-                            // FIXME: test re completed archived tasks
-                            /*  const completedItemsData = await getEndPoint(`archive/items?project_id=2337615654`, null, 'GET')
-                                 console.log('test for archive: ' + JSON.stringify(completedItemsData)) */
                             /*
-                            // now consider completed tasks
-                            for (const completedContainer of requestResponse.completed_info) {
-                                console.log(JSON.stringify(completedContainer))
-                    
-                                // FIXME: currently assumes project but could return section or item
-                                const completedItemsData = await getEndPoint(`archive/items?project_id=${completedContainer.project_id}`, null, 'GET')
-                                console.log(JSON.stringify(completedItemsData))
-                                for (const item of completedItemsData.items) {
-                                    // TODO: add details
-                                    const newTask = new Task(item.content, projectIdMappings[item.project_id])
-                                    newTask.markComplete(null) //FIXME: add date
-                                }
-                    
-                            }
-                                */
-                            /*
-                    
-                    
-                            // mark any completed projects complete
-                            for (const completedProject of json.completed.projects) {
-                                projectIdMappings[completedProject.id].markComplete(new Date(completedProject.updated_at))
-                            }
-                    
                             // add project notes
                             for (const note of json.project_notes) {
                                 projectIdMappings[note.project_id].note = projectIdMappings[note.project_id].note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
                             }
-                    
-                        
-                            
-                            // APPROACH 1: only add once parent exists, loop through
-                    
-                            while (tasks.length > 0) {
-                                const tasksToRemove: number[] = [];
-                            
-                                for (let i = 0; i < tasks.length; i++) {
-                                    const task = tasks[i];
-                                    if (!task.parent_id || task.parent_id in taskIdMappings) {
-                                        addTask(task, taskIdMappings[task.parent_id]); // add task
-                                        tasksToRemove.push(i);
-                                    }
-                                }
-                            
-                                // Filter out tasks that have been added
-                                tasks = tasks.filter((_, index) => !tasksToRemove.includes(index));
-                            }
-                    
-                            
-                            // APPROACH 2: create all then move
-                            /*
-                            for (const task of tasks) {
-                                addTask(task, null)
-                            }
-                    
-                            // move any nested tasks to the correct place
-                            for (const task of tasks) {
-                                if (task.parent_id) {
-                                    const omniTask = taskIdMappings[task.id]
-                                    const parent = taskIdMappings[task.parent_id]
-                                    moveTasks([omniTask], parent)
-                                }
-                            }
-                            ------------
                     
                             // add notes to tasks
                             const completedNotes = json.completed.items.flatMap(item => item.notes)
                             for (const note of [...json.notes, ...completedNotes]) {
                                 taskIdMappings[note.item_id].note = taskIdMappings[note.item_id].note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
                             }
-                            
-                            // deal with inbox project (at end)
-                            const inboxProject = projectNamed("Inbox")
-                            moveTasks(inboxProject.tasks, inbox.ending)
-                            deleteObject(inboxProject)
                     
                             */
+                            // deal with inbox project (at end)
                         ];
                     case 6:
                         _a.sent();
+                        inboxProject = projectNamed("Inbox");
+                        moveTasks(inboxProject.tasks, inbox.ending);
+                        deleteObject(inboxProject);
                         return [2 /*return*/];
                 }
             });
@@ -373,6 +310,4 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     };
     return action;
 })();
-// IMPROVEMENT: use directly with Todoist API rather than export
-// IMPROVEMENT: add support for sections
 // IMPROVEMENT: add estimatedMinutes based on 'duration' (but need to confirm how this data is exported from Todoist)
