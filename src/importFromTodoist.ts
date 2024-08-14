@@ -30,7 +30,7 @@
             request.url = URL.fromString(url)
 
             const response = await request.fetch()
-            console.log(JSON.stringify(response))
+            // console.log(JSON.stringify(response))
             
             return JSON.parse(response.bodyString)
         }
@@ -47,17 +47,21 @@
         }
         const repeatingTag = tagNamed('repeating') || new Tag('repeating', null)
    
-        const bodyData = {sync_token: "*", resource_types: '["projects", "completed_info"]'}
+        const bodyData = {sync_token: "*", resource_types: '["projects", "completed_info", "notes"]'}
         const requestResponse = await getEndPoint('sync', bodyData, 'POST')
-        
-        console.log(JSON.stringify(requestResponse))
+
+        const completedRequestBody = {annotate_notes: "true"} // TODO: deal with limit
+        const completedRequest = await getEndPoint('completed/get_all', completedRequestBody, 'POST')
 
 
-        console.log(requestResponse.completed_info.filter(item => 'project_id' in item))
+        const notesByItemId = completedRequest.items.reduce((acc, item) => {
+            if (item.notes.length > 0) {
+              acc[item.task_id] = item.notes;
+            }
+            return acc;
+        }, {})
 
         const projectsContainingCompletedTasks = requestResponse.completed_info.filter(item => 'project_id' in item).map(item => item.project_id)
-        const sectionsContainingCompletedTasks = requestResponse.completed_info.filter(item => 'section_id' in item).map(item => item.section_id)
-        const itemsContainingCompletedTasks = requestResponse.completed_info.filter(item => 'item_id' in item).map(item => item.item_id)
 
         // PROCESS PROJECTS
         const projectIdMappings = {}
@@ -93,7 +97,6 @@
                     createdSection.sequential = false
                     if (section.is_archived) {
                         let completedItemsData = await getEndPoint(`archive/items?section_id=${section.id}`, null, 'GET')
-                        console.log(JSON.stringify(completedItemsData))
                         await processItemsAndMarkComplete(completedItemsData)
                     }
                 }
@@ -124,7 +127,15 @@
                     const tagArray = item.labels.map(label => flattenedTags.byName(label) || new Tag(label, null))
                     createdTask.addTags([priorityTags[item.priority], ...tagArray])
     
-                    // if (task.completed_at) createdTask.markComplete(new Date(task.completed_at)) // TODO: completed tasks
+                    // add notes for task 
+                    const notesFromIncompleteTasks = requestResponse.notes.filter(note => note.item_id === item.id)
+                    const notesFromCompleteTasks = notesByItemId[item.id] || []
+
+                    const notes = [...notesFromIncompleteTasks, ...notesFromCompleteTasks]
+                    for (const note of notes) {
+                        createdTask.note = createdTask.note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
+                    }
+
                     return createdTask
                 }
     
@@ -156,7 +167,6 @@
                     for (const item of completedInfoObject.items) {
                         const newTask = addTask(item)
                         createdItems.push({task: newTask, completedDate: new Date(item.completed_at)})
-                        newTask.markComplete(new Date(item.completed_at))
                     }
                     for (const completedInfoId of completedInfoObject.completed_info) {
                         
@@ -190,17 +200,6 @@
 
         const archiveFolder = new Folder('Archive', null)
         await processProjects(archivedProjectsData, archiveFolder)
-
-        /*
-        
-
-        // add notes to tasks
-        const completedNotes = json.completed.items.flatMap(item => item.notes)
-        for (const note of [...json.notes, ...completedNotes]) {
-            taskIdMappings[note.item_id].note = taskIdMappings[note.item_id].note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
-        }
-
-        */
         
         // deal with inbox project (at end)
         const inboxProject = projectNamed("Inbox")

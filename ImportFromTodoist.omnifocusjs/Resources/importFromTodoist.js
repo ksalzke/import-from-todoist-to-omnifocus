@@ -65,16 +65,18 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                 if (method !== 'GET')
                                     request.bodyString = JSON.stringify(bodyData);
                                 request.url = URL.fromString(url);
-                                return [4 /*yield*/, request.fetch()];
+                                return [4 /*yield*/, request.fetch()
+                                    // console.log(JSON.stringify(response))
+                                ];
                             case 1:
                                 response = _a.sent();
-                                console.log(JSON.stringify(response));
+                                // console.log(JSON.stringify(response))
                                 return [2 /*return*/, JSON.parse(response.bodyString)];
                         }
                     });
                 });
             }
-            var credentialsExist, form, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, projectsContainingCompletedTasks, sectionsContainingCompletedTasks, itemsContainingCompletedTasks, projectIdMappings, processProjects, archivedProjectsData, archiveFolder, inboxProject;
+            var credentialsExist, form, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, completedRequestBody, completedRequest, notesByItemId, projectsContainingCompletedTasks, projectIdMappings, processProjects, archivedProjectsData, archiveFolder, inboxProject;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -97,15 +99,22 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             4: new Tag("Priority 4", priorityTagGroup)
                         };
                         repeatingTag = tagNamed('repeating') || new Tag('repeating', null);
-                        bodyData = { sync_token: "*", resource_types: '["projects", "completed_info"]' };
+                        bodyData = { sync_token: "*", resource_types: '["projects", "completed_info", "notes"]' };
                         return [4 /*yield*/, getEndPoint('sync', bodyData, 'POST')];
                     case 3:
                         requestResponse = _a.sent();
-                        console.log(JSON.stringify(requestResponse));
-                        console.log(requestResponse.completed_info.filter(function (item) { return 'project_id' in item; }));
+                        completedRequestBody = { annotate_notes: "true" } // TODO: deal with limit
+                        ;
+                        return [4 /*yield*/, getEndPoint('completed/get_all', completedRequestBody, 'POST')];
+                    case 4:
+                        completedRequest = _a.sent();
+                        notesByItemId = completedRequest.items.reduce(function (acc, item) {
+                            if (item.notes.length > 0) {
+                                acc[item.task_id] = item.notes;
+                            }
+                            return acc;
+                        }, {});
                         projectsContainingCompletedTasks = requestResponse.completed_info.filter(function (item) { return 'project_id' in item; }).map(function (item) { return item.project_id; });
-                        sectionsContainingCompletedTasks = requestResponse.completed_info.filter(function (item) { return 'section_id' in item; }).map(function (item) { return item.section_id; });
-                        itemsContainingCompletedTasks = requestResponse.completed_info.filter(function (item) { return 'item_id' in item; }).map(function (item) { return item.item_id; });
                         projectIdMappings = {};
                         processProjects = function (projects, location) { return __awaiter(_this, void 0, void 0, function () {
                             var _loop_1, _i, projects_1, project;
@@ -133,7 +142,14 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                 createdTask.removeTags(createdTask.tags); // first remove any existing tags that might have been inherited from the parent
                                                 var tagArray = item.labels.map(function (label) { return flattenedTags.byName(label) || new Tag(label, null); });
                                                 createdTask.addTags(__spreadArray([priorityTags[item.priority]], tagArray, true));
-                                                // if (task.completed_at) createdTask.markComplete(new Date(task.completed_at)) // TODO: completed tasks
+                                                // add notes for task 
+                                                var notesFromIncompleteTasks = requestResponse.notes.filter(function (note) { return note.item_id === item.id; });
+                                                var notesFromCompleteTasks = notesByItemId[item.id] || [];
+                                                var notes = __spreadArray(__spreadArray([], notesFromIncompleteTasks, true), notesFromCompleteTasks, true);
+                                                for (var _i = 0, notes_1 = notes; _i < notes_1.length; _i++) {
+                                                    var note = notes_1[_i];
+                                                    createdTask.note = createdTask.note + ("\n\n " + note.posted_at + ": " + note.content + " " + (note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''));
+                                                }
                                                 return createdTask;
                                             }
                                             // deal with completed items
@@ -148,7 +164,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                                     item = _a[_i];
                                                                     newTask = addTask(item);
                                                                     createdItems.push({ task: newTask, completedDate: new Date(item.completed_at) });
-                                                                    newTask.markComplete(new Date(item.completed_at));
                                                                 }
                                                                 _b = 0, _c = completedInfoObject.completed_info;
                                                                 _e.label = 1;
@@ -213,7 +228,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                         return [4 /*yield*/, getEndPoint("archive/items?section_id=" + section.id, null, 'GET')];
                                                     case 3:
                                                         completedItemsData = _f.sent();
-                                                        console.log(JSON.stringify(completedItemsData));
                                                         return [4 /*yield*/, processItemsAndMarkComplete(completedItemsData)];
                                                     case 4:
                                                         _f.sent();
@@ -277,27 +291,17 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             });
                         }); };
                         return [4 /*yield*/, processProjects(requestResponse.projects, null)];
-                    case 4:
+                    case 5:
                         _a.sent();
                         return [4 /*yield*/, getEndPoint('projects/get_archived', null, 'GET')]; //TODO: deal with more than 500
-                    case 5:
+                    case 6:
                         archivedProjectsData = _a.sent() //TODO: deal with more than 500
                         ;
                         archiveFolder = new Folder('Archive', null);
                         return [4 /*yield*/, processProjects(archivedProjectsData, archiveFolder)
-                            /*
-                            
-                    
-                            // add notes to tasks
-                            const completedNotes = json.completed.items.flatMap(item => item.notes)
-                            for (const note of [...json.notes, ...completedNotes]) {
-                                taskIdMappings[note.item_id].note = taskIdMappings[note.item_id].note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
-                            }
-                    
-                            */
                             // deal with inbox project (at end)
                         ];
-                    case 6:
+                    case 7:
                         _a.sent();
                         inboxProject = projectNamed("Inbox");
                         moveTasks(inboxProject.tasks, inbox.ending);
