@@ -139,17 +139,32 @@
                 } 
 
 
-                // get completed items (if any)
+                // deal with completed items
+                async function processItemsAndMarkComplete (completedInfoObject) {
+                    console.log('processing completed_info object: ' + JSON.stringify(completedInfoObject))
+                    for (const item of completedInfoObject.items) {
+                        const newTask = addTask(item)
+                        newTask.markComplete(new Date(item.completed_at))
+                    }
+                    for (const completedInfoId of completedInfoObject.completed_info) {
+                        console.log('completedInfoId: ' + completedInfoId)
+                        if ('item_id' in completedInfoId) {
+                            const newCompletedInfoObject = await getEndPoint(`archive/items?parent_id=${completedInfoId.item_id}`, null, 'GET') 
+                            await processItemsAndMarkComplete(newCompletedInfoObject)
+                        }
+
+                        // TODO: consider sections
+                    }
+
+                    // TODO: mark complete at end, so that tasks aren't 'uncompleted' when child tasks are added
+                }
+
+
                 console.log('projectsContainingCompletedTasks: ' + projectsContainingCompletedTasks)
                 console.log('project id: ' + project.id)
                 if (projectsContainingCompletedTasks.includes(project.id)) {
-                    const completedItemsData = await getEndPoint(`archive/items?project_id=${project.id}`, null, 'GET')
-                    console.log(JSON.stringify(completedItemsData))
-                    for (const completedItem of completedItemsData.items) {
-                        console.log('adding ' + completedItem.content)
-                        const newTask = addTask(completedItem)
-                        newTask.markComplete(new Date(completedItem.completed_at))
-                    }
+                    let completedItemsData = await getEndPoint(`archive/items?project_id=${project.id}`, null, 'GET')
+                    processItemsAndMarkComplete(completedItemsData)
                 }
 
 
@@ -166,8 +181,8 @@
         await processProjects(archivedProjectsData, archiveFolder)
 
         // FIXME: test re completed archived tasks
-        const completedItemsData = await getEndPoint(`archive/items?project_id=2337615654`, null, 'GET')
-            console.log('test for archive: ' + JSON.stringify(completedItemsData))
+       /*  const completedItemsData = await getEndPoint(`archive/items?project_id=2337615654`, null, 'GET')
+            console.log('test for archive: ' + JSON.stringify(completedItemsData)) */
         
 
         /*
