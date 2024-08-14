@@ -76,7 +76,33 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
-            var credentialsExist, form, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, completedRequestBody, completedRequest, notesByItemId, projectsContainingCompletedTasks, projectIdMappings, processProjects, archivedProjectsData, archiveFolder, inboxProject;
+            function fetchCompleted(offset) {
+                if (offset === void 0) { offset = 0; }
+                return __awaiter(this, void 0, void 0, function () {
+                    var completedRequestBody, page, remainder;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                completedRequestBody = { limit: COMPL_MAX_PAGE_SIZE, offset: offset, annotate_notes: "true" };
+                                return [4 /*yield*/, getEndPoint('completed/get_all', completedRequestBody, 'POST')];
+                            case 1:
+                                page = _a.sent();
+                                if (!(page.items.length > 0)) return [3 /*break*/, 3];
+                                return [4 /*yield*/, fetchCompleted(offset + COMPL_MAX_PAGE_SIZE)];
+                            case 2:
+                                remainder = _a.sent();
+                                return [2 /*return*/, {
+                                        items: page.items.concat(remainder.items),
+                                        projects: Object.assign({}, page.projects, remainder.projects),
+                                        sections: Object.assign({}, page.sections, remainder.sections)
+                                    }];
+                            case 3: return [2 /*return*/, page];
+                            case 4: return [2 /*return*/, page];
+                        }
+                    });
+                });
+            }
+            var credentialsExist, form, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, COMPL_MAX_PAGE_SIZE, completedRequest, notesByItemId, projectsContainingCompletedTasks, projectIdMappings, processProjects, archivedProjectsData, archiveFolder, inboxProject;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -103,9 +129,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         return [4 /*yield*/, getEndPoint('sync', bodyData, 'POST')];
                     case 3:
                         requestResponse = _a.sent();
-                        completedRequestBody = { annotate_notes: "true" } // TODO: deal with limit
-                        ;
-                        return [4 /*yield*/, getEndPoint('completed/get_all', completedRequestBody, 'POST')];
+                        COMPL_MAX_PAGE_SIZE = 200;
+                        return [4 /*yield*/, fetchCompleted()];
                     case 4:
                         completedRequest = _a.sent();
                         notesByItemId = completedRequest.items.reduce(function (acc, item) {

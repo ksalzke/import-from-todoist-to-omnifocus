@@ -50,9 +50,26 @@
         const bodyData = {sync_token: "*", resource_types: '["projects", "completed_info", "notes"]'}
         const requestResponse = await getEndPoint('sync', bodyData, 'POST')
 
-        const completedRequestBody = {annotate_notes: "true"} // TODO: deal with limit
-        const completedRequest = await getEndPoint('completed/get_all', completedRequestBody, 'POST')
+        const COMPL_MAX_PAGE_SIZE = 200
+        async function fetchCompleted (offset = 0) {
+            const completedRequestBody = {limit: COMPL_MAX_PAGE_SIZE, offset: offset, annotate_notes: "true"}
+            let page = await getEndPoint('completed/get_all', completedRequestBody, 'POST')
 
+            if (page.items.length > 0) {
+                const remainder = await fetchCompleted(offset + COMPL_MAX_PAGE_SIZE);
+                return {
+                  items: page.items.concat(remainder.items),
+                  projects: Object.assign({}, page.projects, remainder.projects),
+                  sections: Object.assign({}, page.sections, remainder.sections),
+                };
+              } else {
+                return page;
+              }
+
+            return page
+        }
+
+        const completedRequest = await fetchCompleted()
 
         const notesByItemId = completedRequest.items.reduce((acc, item) => {
             if (item.notes.length > 0) {
