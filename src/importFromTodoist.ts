@@ -3,6 +3,7 @@
     const credentials = new Credentials()
     const action = new PlugIn.Action(async function (selection: Selection) {
 
+        // PROMPT FOR API IF NOT ALREADY STORED
         const credentialsExist = credentials.read('Todoist')
 
         if (!credentialsExist) {
@@ -50,9 +51,16 @@
         const requestResponse = await getEndPoint('sync', bodyData, 'POST')
         
         console.log(JSON.stringify(requestResponse))
-        
-        const projectIdMappings = {}
 
+
+        console.log(requestResponse.completed_info.filter(item => 'project_id' in item))
+
+        const projectsContainingCompletedTasks = requestResponse.completed_info.filter(item => 'project_id' in item).map(item => item.project_id)
+        const sectionsContainingCompletedTasks = requestResponse.completed_info.filter(item => 'section_id' in item).map(item => item.section_id)
+        const itemsContainingCompletedTasks = requestResponse.completed_info.filter(item => 'item_id' in item).map(item => item.item_id)
+
+        // PROCESS PROJECTS
+        const projectIdMappings = {}
         const processProjects = async (projects, location) => {
             for (const project of projects) { //TODO: include archived projects
 
@@ -102,8 +110,11 @@
                     createdTask.removeTags(createdTask.tags) // first remove any existing tags that might have been inherited from the parent
                     const tagArray = item.labels.map(label => flattenedTags.byName(label) || new Tag(label, null))
                     createdTask.addTags([priorityTags[item.priority], ...tagArray])
+
+                    // TODO: completed sections
     
                     // if (task.completed_at) createdTask.markComplete(new Date(task.completed_at)) // TODO: completed tasks
+                    return createdTask
                 }
     
                 let remainingTasks = projectDataResponse.items
@@ -126,6 +137,22 @@
                     // Filter out tasks that have been added
                     remainingTasks = remainingTasks.filter((_, index) => !tasksToRemove.includes(index));
                 } 
+
+
+                // get completed items (if any)
+                console.log('projectsContainingCompletedTasks: ' + projectsContainingCompletedTasks)
+                console.log('project id: ' + project.id)
+                if (projectsContainingCompletedTasks.includes(project.id)) {
+                    const completedItemsData = await getEndPoint(`archive/items?project_id=${project.id}`, null, 'GET')
+                    console.log(JSON.stringify(completedItemsData))
+                    for (const completedItem of completedItemsData.items) {
+                        console.log('adding ' + completedItem.content)
+                        const newTask = addTask(completedItem)
+                        newTask.markComplete(new Date(completedItem.completed_at))
+                    }
+                }
+
+
             }
 
         }
@@ -133,9 +160,6 @@
         await processProjects(requestResponse.projects, null)
         
         const archivedProjectsData = await getEndPoint('projects/get_archived', null, 'GET') //TODO: deal with more than 500
-
-
-
 
 
         const archiveFolder = new Folder('Archive', null)
@@ -146,6 +170,7 @@
             console.log('test for archive: ' + JSON.stringify(completedItemsData))
         
 
+        /*
         // now consider completed tasks
         for (const completedContainer of requestResponse.completed_info) {
             console.log(JSON.stringify(completedContainer))
@@ -160,6 +185,7 @@
             }
 
         }
+            */
 
         /* 
 

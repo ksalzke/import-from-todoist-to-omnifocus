@@ -74,10 +74,10 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
-            var credentialsExist, form, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, projectIdMappings, processProjects, archivedProjectsData, archiveFolder, completedItemsData, _i, _a, completedContainer, completedItemsData_1, _b, _c, item, newTask;
+            var credentialsExist, form, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, projectsContainingCompletedTasks, sectionsContainingCompletedTasks, itemsContainingCompletedTasks, projectIdMappings, processProjects, archivedProjectsData, archiveFolder, completedItemsData;
             var _this = this;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
                         credentialsExist = credentials.read('Todoist');
                         if (!!credentialsExist) return [3 /*break*/, 2];
@@ -85,9 +85,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         form.addField(new Form.Field.String('apiToken', 'API Token', null, null), null);
                         return [4 /*yield*/, form.show('Enter Todoist API Token', 'Continue')];
                     case 1:
-                        _d.sent();
+                        _a.sent();
                         credentials.write('Todoist', 'Todoist User', form.values.apiToken);
-                        _d.label = 2;
+                        _a.label = 2;
                     case 2:
                         priorityTagGroup = tagNamed('Priority') || new Tag('Priority', null);
                         priorityTags = {
@@ -100,8 +100,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         bodyData = { sync_token: "*", resource_types: '["projects", "completed_info"]' };
                         return [4 /*yield*/, getEndPoint('sync', bodyData, 'POST')];
                     case 3:
-                        requestResponse = _d.sent();
+                        requestResponse = _a.sent();
                         console.log(JSON.stringify(requestResponse));
+                        console.log(requestResponse.completed_info.filter(function (item) { return 'project_id' in item; }));
+                        projectsContainingCompletedTasks = requestResponse.completed_info.filter(function (item) { return 'project_id' in item; }).map(function (item) { return item.project_id; });
+                        sectionsContainingCompletedTasks = requestResponse.completed_info.filter(function (item) { return 'section_id' in item; }).map(function (item) { return item.section_id; });
+                        itemsContainingCompletedTasks = requestResponse.completed_info.filter(function (item) { return 'item_id' in item; }).map(function (item) { return item.item_id; });
                         projectIdMappings = {};
                         processProjects = function (projects, location) { return __awaiter(_this, void 0, void 0, function () {
                             var _loop_1, _i, projects_1, project;
@@ -109,9 +113,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                 switch (_a.label) {
                                     case 0:
                                         _loop_1 = function (project) {
-                                            var createdProject, requestData, projectDataResponse, sectionIdMappings, _b, _c, section, createdSection, taskIdMappings, addTask, remainingTasks, _loop_2, state_1;
-                                            return __generator(this, function (_d) {
-                                                switch (_d.label) {
+                                            var createdProject, requestData, projectDataResponse, sectionIdMappings, _b, _c, section, createdSection, taskIdMappings, addTask, remainingTasks, _loop_2, state_1, completedItemsData_1, _d, _e, completedItem, newTask;
+                                            return __generator(this, function (_f) {
+                                                switch (_f.label) {
                                                     case 0:
                                                         createdProject = new Project(project.name, location);
                                                         if (project.created_at)
@@ -123,7 +127,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             // create sections
                                                         ];
                                                     case 1:
-                                                        projectDataResponse = _d.sent();
+                                                        projectDataResponse = _f.sent();
                                                         sectionIdMappings = {};
                                                         for (_b = 0, _c = projectDataResponse.sections; _b < _c.length; _b++) {
                                                             section = _c[_b];
@@ -152,7 +156,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             createdTask.removeTags(createdTask.tags); // first remove any existing tags that might have been inherited from the parent
                                                             var tagArray = item.labels.map(function (label) { return flattenedTags.byName(label) || new Tag(label, null); });
                                                             createdTask.addTags(__spreadArray([priorityTags[item.priority]], tagArray, true));
+                                                            // TODO: completed sections
                                                             // if (task.completed_at) createdTask.markComplete(new Date(task.completed_at)) // TODO: completed tasks
+                                                            return createdTask;
                                                         };
                                                         remainingTasks = projectDataResponse.items;
                                                         _loop_2 = function () {
@@ -166,8 +172,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             }
                                                             // fallback to stop us getting stuck in infinite loop - add any remaining tasks to root of project
                                                             if (tasksToRemove.length === 0) {
-                                                                for (var _e = 0, remainingTasks_1 = remainingTasks; _e < remainingTasks_1.length; _e++) {
-                                                                    var task = remainingTasks_1[_e];
+                                                                for (var _g = 0, remainingTasks_1 = remainingTasks; _g < remainingTasks_1.length; _g++) {
+                                                                    var task = remainingTasks_1[_g];
                                                                     addTask(task);
                                                                 }
                                                                 return "break";
@@ -180,7 +186,22 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             if (state_1 === "break")
                                                                 break;
                                                         }
-                                                        return [2 /*return*/];
+                                                        // get completed items (if any)
+                                                        console.log('projectsContainingCompletedTasks: ' + projectsContainingCompletedTasks);
+                                                        console.log('project id: ' + project.id);
+                                                        if (!projectsContainingCompletedTasks.includes(project.id)) return [3 /*break*/, 3];
+                                                        return [4 /*yield*/, getEndPoint("archive/items?project_id=" + project.id, null, 'GET')];
+                                                    case 2:
+                                                        completedItemsData_1 = _f.sent();
+                                                        console.log(JSON.stringify(completedItemsData_1));
+                                                        for (_d = 0, _e = completedItemsData_1.items; _d < _e.length; _d++) {
+                                                            completedItem = _e[_d];
+                                                            console.log('adding ' + completedItem.content);
+                                                            newTask = addTask(completedItem);
+                                                            newTask.markComplete(new Date(completedItem.completed_at));
+                                                        }
+                                                        _f.label = 3;
+                                                    case 3: return [2 /*return*/];
                                                 }
                                             });
                                         };
@@ -202,41 +223,22 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         }); };
                         return [4 /*yield*/, processProjects(requestResponse.projects, null)];
                     case 4:
-                        _d.sent();
+                        _a.sent();
                         return [4 /*yield*/, getEndPoint('projects/get_archived', null, 'GET')]; //TODO: deal with more than 500
                     case 5:
-                        archivedProjectsData = _d.sent() //TODO: deal with more than 500
+                        archivedProjectsData = _a.sent() //TODO: deal with more than 500
                         ;
                         archiveFolder = new Folder('Archive', null);
                         return [4 /*yield*/, processProjects(archivedProjectsData, archiveFolder)
                             // FIXME: test re completed archived tasks
                         ];
                     case 6:
-                        _d.sent();
+                        _a.sent();
                         return [4 /*yield*/, getEndPoint("archive/items?project_id=2337615654", null, 'GET')];
                     case 7:
-                        completedItemsData = _d.sent();
+                        completedItemsData = _a.sent();
                         console.log('test for archive: ' + JSON.stringify(completedItemsData));
-                        _i = 0, _a = requestResponse.completed_info;
-                        _d.label = 8;
-                    case 8:
-                        if (!(_i < _a.length)) return [3 /*break*/, 11];
-                        completedContainer = _a[_i];
-                        console.log(JSON.stringify(completedContainer));
-                        return [4 /*yield*/, getEndPoint("archive/items?project_id=" + completedContainer.project_id, null, 'GET')];
-                    case 9:
-                        completedItemsData_1 = _d.sent();
-                        console.log(JSON.stringify(completedItemsData_1));
-                        for (_b = 0, _c = completedItemsData_1.items; _b < _c.length; _b++) {
-                            item = _c[_b];
-                            newTask = new Task(item.content, projectIdMappings[item.project_id]);
-                            newTask.markComplete(null); //FIXME: add date
-                        }
-                        _d.label = 10;
-                    case 10:
-                        _i++;
-                        return [3 /*break*/, 8];
-                    case 11: return [2 /*return*/];
+                        return [2 /*return*/];
                 }
             });
         });
