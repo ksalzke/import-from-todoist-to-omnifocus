@@ -133,8 +133,17 @@
         await processProjects(requestResponse.projects, null)
         
         const archivedProjectsData = await getEndPoint('projects/get_archived', null, 'GET') //TODO: deal with more than 500
+
+
+
+
+
         const archiveFolder = new Folder('Archive', null)
         await processProjects(archivedProjectsData, archiveFolder)
+
+        // FIXME: test re completed archived tasks
+        const completedItemsData = await getEndPoint(`archive/items?project_id=2337615654`, null, 'GET')
+            console.log('test for archive: ' + JSON.stringify(completedItemsData))
         
 
         // now consider completed tasks

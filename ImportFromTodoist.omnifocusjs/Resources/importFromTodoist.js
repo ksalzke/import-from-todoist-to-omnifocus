@@ -74,7 +74,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
-            var credentialsExist, form, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, projectIdMappings, processProjects, archivedProjectsData, archiveFolder, _i, _a, completedContainer, completedItemsData, _b, _c, item, newTask;
+            var credentialsExist, form, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, projectIdMappings, processProjects, archivedProjectsData, archiveFolder, completedItemsData, _i, _a, completedContainer, completedItemsData_1, _b, _c, item, newTask;
             var _this = this;
             return __generator(this, function (_d) {
                 switch (_d.label) {
@@ -209,30 +209,34 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         ;
                         archiveFolder = new Folder('Archive', null);
                         return [4 /*yield*/, processProjects(archivedProjectsData, archiveFolder)
-                            // now consider completed tasks
+                            // FIXME: test re completed archived tasks
                         ];
                     case 6:
                         _d.sent();
-                        _i = 0, _a = requestResponse.completed_info;
-                        _d.label = 7;
+                        return [4 /*yield*/, getEndPoint("archive/items?project_id=2337615654", null, 'GET')];
                     case 7:
-                        if (!(_i < _a.length)) return [3 /*break*/, 10];
+                        completedItemsData = _d.sent();
+                        console.log('test for archive: ' + JSON.stringify(completedItemsData));
+                        _i = 0, _a = requestResponse.completed_info;
+                        _d.label = 8;
+                    case 8:
+                        if (!(_i < _a.length)) return [3 /*break*/, 11];
                         completedContainer = _a[_i];
                         console.log(JSON.stringify(completedContainer));
                         return [4 /*yield*/, getEndPoint("archive/items?project_id=" + completedContainer.project_id, null, 'GET')];
-                    case 8:
-                        completedItemsData = _d.sent();
-                        console.log(JSON.stringify(completedItemsData));
-                        for (_b = 0, _c = completedItemsData.items; _b < _c.length; _b++) {
+                    case 9:
+                        completedItemsData_1 = _d.sent();
+                        console.log(JSON.stringify(completedItemsData_1));
+                        for (_b = 0, _c = completedItemsData_1.items; _b < _c.length; _b++) {
                             item = _c[_b];
                             newTask = new Task(item.content, projectIdMappings[item.project_id]);
                             newTask.markComplete(null); //FIXME: add date
                         }
-                        _d.label = 9;
-                    case 9:
+                        _d.label = 10;
+                    case 10:
                         _i++;
-                        return [3 /*break*/, 7];
-                    case 10: return [2 /*return*/];
+                        return [3 /*break*/, 8];
+                    case 11: return [2 /*return*/];
                 }
             });
         });
