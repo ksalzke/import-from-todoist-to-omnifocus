@@ -243,7 +243,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             if (state_1 === "break")
                                                                 break;
                                                         }
-                                                        if (!projectsContainingCompletedTasks.includes(project.id)) return [3 /*break*/, 9];
+                                                        if (!(projectsContainingCompletedTasks.includes(project.id) || project.is_archived)) return [3 /*break*/, 9];
                                                         return [4 /*yield*/, getEndPoint("archive/items?project_id=" + project.id, null, 'GET')];
                                                     case 7:
                                                         completedItemsData = _d.sent();

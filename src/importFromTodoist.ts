@@ -168,7 +168,7 @@
                     }
                 }
 
-                if (projectsContainingCompletedTasks.includes(project.id)) {
+                if (projectsContainingCompletedTasks.includes(project.id) || project.is_archived) {
                     let completedItemsData = await getEndPoint(`archive/items?project_id=${project.id}`, null, 'GET')
                     await processItemsAndMarkComplete(completedItemsData)
                 }
