@@ -116,34 +116,41 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                             // deal with completed items
                                             function processItemsAndMarkComplete(completedInfoObject) {
                                                 return __awaiter(this, void 0, void 0, function () {
-                                                    var _i, _a, item, newTask, _b, _c, completedInfoId, newCompletedInfoObject;
-                                                    return __generator(this, function (_d) {
-                                                        switch (_d.label) {
+                                                    var createdItems, _i, _a, item, newTask, _b, _c, completedInfoId, newCompletedInfoObject, _d, createdItems_1, item, task, date;
+                                                    return __generator(this, function (_e) {
+                                                        switch (_e.label) {
                                                             case 0:
-                                                                console.log('processing completed_info object: ' + JSON.stringify(completedInfoObject));
+                                                                createdItems = [];
                                                                 for (_i = 0, _a = completedInfoObject.items; _i < _a.length; _i++) {
                                                                     item = _a[_i];
                                                                     newTask = addTask(item);
+                                                                    createdItems.push({ task: newTask, completedDate: new Date(item.completed_at) });
                                                                     newTask.markComplete(new Date(item.completed_at));
                                                                 }
                                                                 _b = 0, _c = completedInfoObject.completed_info;
-                                                                _d.label = 1;
+                                                                _e.label = 1;
                                                             case 1:
                                                                 if (!(_b < _c.length)) return [3 /*break*/, 5];
                                                                 completedInfoId = _c[_b];
-                                                                console.log('completedInfoId: ' + completedInfoId);
                                                                 if (!('item_id' in completedInfoId)) return [3 /*break*/, 4];
                                                                 return [4 /*yield*/, getEndPoint("archive/items?parent_id=" + completedInfoId.item_id, null, 'GET')];
                                                             case 2:
-                                                                newCompletedInfoObject = _d.sent();
+                                                                newCompletedInfoObject = _e.sent();
                                                                 return [4 /*yield*/, processItemsAndMarkComplete(newCompletedInfoObject)];
                                                             case 3:
-                                                                _d.sent();
-                                                                _d.label = 4;
+                                                                _e.sent();
+                                                                _e.label = 4;
                                                             case 4:
                                                                 _b++;
                                                                 return [3 /*break*/, 1];
-                                                            case 5: return [2 /*return*/];
+                                                            case 5:
+                                                                // mark complete at end, so that tasks aren't 'uncompleted' when child tasks are added
+                                                                for (_d = 0, createdItems_1 = createdItems; _d < createdItems_1.length; _d++) {
+                                                                    item = createdItems_1[_d];
+                                                                    task = item.task, date = item.date;
+                                                                    task.markComplete(date);
+                                                                }
+                                                                return [2 /*return*/];
                                                         }
                                                     });
                                                 });
@@ -221,8 +228,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             if (state_1 === "break")
                                                                 break;
                                                         }
-                                                        console.log('projectsContainingCompletedTasks: ' + projectsContainingCompletedTasks);
-                                                        console.log('project id: ' + project.id);
                                                         if (!projectsContainingCompletedTasks.includes(project.id)) return [3 /*break*/, 3];
                                                         return [4 /*yield*/, getEndPoint("archive/items?project_id=" + project.id, null, 'GET')];
                                                     case 2:

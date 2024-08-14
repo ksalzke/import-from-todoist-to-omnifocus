@@ -141,13 +141,13 @@
 
                 // deal with completed items
                 async function processItemsAndMarkComplete (completedInfoObject) {
-                    console.log('processing completed_info object: ' + JSON.stringify(completedInfoObject))
+                    const createdItems = []
                     for (const item of completedInfoObject.items) {
                         const newTask = addTask(item)
+                        createdItems.push({task: newTask, completedDate: new Date(item.completed_at)})
                         newTask.markComplete(new Date(item.completed_at))
                     }
                     for (const completedInfoId of completedInfoObject.completed_info) {
-                        console.log('completedInfoId: ' + completedInfoId)
                         if ('item_id' in completedInfoId) {
                             const newCompletedInfoObject = await getEndPoint(`archive/items?parent_id=${completedInfoId.item_id}`, null, 'GET') 
                             await processItemsAndMarkComplete(newCompletedInfoObject)
@@ -156,12 +156,13 @@
                         // TODO: consider sections
                     }
 
-                    // TODO: mark complete at end, so that tasks aren't 'uncompleted' when child tasks are added
+                    // mark complete at end, so that tasks aren't 'uncompleted' when child tasks are added
+                    for (const item of createdItems) {
+                        const {task, date} = item
+                        task.markComplete(date)
+                    }
                 }
 
-
-                console.log('projectsContainingCompletedTasks: ' + projectsContainingCompletedTasks)
-                console.log('project id: ' + project.id)
                 if (projectsContainingCompletedTasks.includes(project.id)) {
                     let completedItemsData = await getEndPoint(`archive/items?project_id=${project.id}`, null, 'GET')
                     processItemsAndMarkComplete(completedItemsData)
