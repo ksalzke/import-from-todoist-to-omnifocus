@@ -62,7 +62,9 @@
         // PROCESS PROJECTS
         const projectIdMappings = {}
         const processProjects = async (projects, location) => {
-            for (const project of projects) { //TODO: include archived projects
+            for (const project of projects) {
+
+                let taskIdMappings = {}
 
                 // get and create projects
                 const createdProject = new Project(project.name, location)
@@ -84,16 +86,22 @@
                     createdSection.added = new Date(section.added_at)
                     sectionIdMappings[section.id] = createdSection
                     createdSection.sequential = false
+                    if (section.is_archived) {
+                        let completedItemsData = await getEndPoint(`archive/items?section_id=${section.id}`, null, 'GET')
+                        console.log(JSON.stringify(completedItemsData))
+                        await processItemsAndMarkComplete(completedItemsData)
+                    }
                 }
     
                 // create tasks/items
-                let taskIdMappings = {}
+
     
-                const addTask = (item) => {
+                function addTask (item) {
                     const taskName = item.description ? `${item.content}\n ${item.description}` : item.content
                     const location = item.parent_id ? taskIdMappings[item.parent_id] : item.section_id ? sectionIdMappings[item.section_id] : createdProject
                     const createdTask = new Task(taskName, location)
                     taskIdMappings[item.id] = createdTask
+
     
                     // update task info
                     createdTask.added = new Date(item.added_at)
@@ -105,13 +113,11 @@
                             createdTask.appendStringToNote(`REPEATING: ${item.due.string}\n\n`)
                         }
                     }
-    
+
                     // add tags
                     createdTask.removeTags(createdTask.tags) // first remove any existing tags that might have been inherited from the parent
                     const tagArray = item.labels.map(label => flattenedTags.byName(label) || new Tag(label, null))
                     createdTask.addTags([priorityTags[item.priority], ...tagArray])
-
-                    // TODO: completed sections
     
                     // if (task.completed_at) createdTask.markComplete(new Date(task.completed_at)) // TODO: completed tasks
                     return createdTask
@@ -148,12 +154,11 @@
                         newTask.markComplete(new Date(item.completed_at))
                     }
                     for (const completedInfoId of completedInfoObject.completed_info) {
+                        
                         if ('item_id' in completedInfoId) {
                             const newCompletedInfoObject = await getEndPoint(`archive/items?parent_id=${completedInfoId.item_id}`, null, 'GET') 
                             await processItemsAndMarkComplete(newCompletedInfoObject)
                         }
-
-                        // TODO: consider sections
                     }
 
                     // mark complete at end, so that tasks aren't 'uncompleted' when child tasks are added
@@ -165,7 +170,7 @@
 
                 if (projectsContainingCompletedTasks.includes(project.id)) {
                     let completedItemsData = await getEndPoint(`archive/items?project_id=${project.id}`, null, 'GET')
-                    processItemsAndMarkComplete(completedItemsData)
+                    await processItemsAndMarkComplete(completedItemsData)
                 }
 
 

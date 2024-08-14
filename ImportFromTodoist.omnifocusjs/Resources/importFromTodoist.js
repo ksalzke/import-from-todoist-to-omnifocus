@@ -113,6 +113,29 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                 switch (_a.label) {
                                     case 0:
                                         _loop_1 = function (project) {
+                                            // create tasks/items
+                                            function addTask(item) {
+                                                var taskName = item.description ? item.content + "\n " + item.description : item.content;
+                                                var location = item.parent_id ? taskIdMappings[item.parent_id] : item.section_id ? sectionIdMappings[item.section_id] : createdProject;
+                                                var createdTask = new Task(taskName, location);
+                                                taskIdMappings[item.id] = createdTask;
+                                                // update task info
+                                                createdTask.added = new Date(item.added_at);
+                                                createdTask.sequential = false;
+                                                if (item.due) {
+                                                    createdTask.dueDate = new Date(item.due.date);
+                                                    if (item.due.is_recurring) {
+                                                        createdTask.addTag(repeatingTag);
+                                                        createdTask.appendStringToNote("REPEATING: " + item.due.string + "\n\n");
+                                                    }
+                                                }
+                                                // add tags
+                                                createdTask.removeTags(createdTask.tags); // first remove any existing tags that might have been inherited from the parent
+                                                var tagArray = item.labels.map(function (label) { return flattenedTags.byName(label) || new Tag(label, null); });
+                                                createdTask.addTags(__spreadArray([priorityTags[item.priority]], tagArray, true));
+                                                // if (task.completed_at) createdTask.markComplete(new Date(task.completed_at)) // TODO: completed tasks
+                                                return createdTask;
+                                            }
                                             // deal with completed items
                                             function processItemsAndMarkComplete(completedInfoObject) {
                                                 return __awaiter(this, void 0, void 0, function () {
@@ -155,10 +178,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                     });
                                                 });
                                             }
-                                            var createdProject, requestData, projectDataResponse, sectionIdMappings, _b, _c, section, createdSection, taskIdMappings, addTask, remainingTasks, _loop_2, state_1, completedItemsData;
+                                            var taskIdMappings, createdProject, requestData, projectDataResponse, sectionIdMappings, _b, _c, section, createdSection, completedItemsData, remainingTasks, _loop_2, state_1, completedItemsData;
                                             return __generator(this, function (_d) {
                                                 switch (_d.label) {
                                                     case 0:
+                                                        taskIdMappings = {};
                                                         createdProject = new Project(project.name, location);
                                                         if (project.created_at)
                                                             createdProject.task.added = new Date(project.created_at); //TODO: note that this is not included
@@ -171,37 +195,28 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                     case 1:
                                                         projectDataResponse = _d.sent();
                                                         sectionIdMappings = {};
-                                                        for (_b = 0, _c = projectDataResponse.sections; _b < _c.length; _b++) {
-                                                            section = _c[_b];
-                                                            createdSection = new Task(section.name, createdProject);
-                                                            createdSection.added = new Date(section.added_at);
-                                                            sectionIdMappings[section.id] = createdSection;
-                                                            createdSection.sequential = false;
-                                                        }
-                                                        taskIdMappings = {};
-                                                        addTask = function (item) {
-                                                            var taskName = item.description ? item.content + "\n " + item.description : item.content;
-                                                            var location = item.parent_id ? taskIdMappings[item.parent_id] : item.section_id ? sectionIdMappings[item.section_id] : createdProject;
-                                                            var createdTask = new Task(taskName, location);
-                                                            taskIdMappings[item.id] = createdTask;
-                                                            // update task info
-                                                            createdTask.added = new Date(item.added_at);
-                                                            createdTask.sequential = false;
-                                                            if (item.due) {
-                                                                createdTask.dueDate = new Date(item.due.date);
-                                                                if (item.due.is_recurring) {
-                                                                    createdTask.addTag(repeatingTag);
-                                                                    createdTask.appendStringToNote("REPEATING: " + item.due.string + "\n\n");
-                                                                }
-                                                            }
-                                                            // add tags
-                                                            createdTask.removeTags(createdTask.tags); // first remove any existing tags that might have been inherited from the parent
-                                                            var tagArray = item.labels.map(function (label) { return flattenedTags.byName(label) || new Tag(label, null); });
-                                                            createdTask.addTags(__spreadArray([priorityTags[item.priority]], tagArray, true));
-                                                            // TODO: completed sections
-                                                            // if (task.completed_at) createdTask.markComplete(new Date(task.completed_at)) // TODO: completed tasks
-                                                            return createdTask;
-                                                        };
+                                                        _b = 0, _c = projectDataResponse.sections;
+                                                        _d.label = 2;
+                                                    case 2:
+                                                        if (!(_b < _c.length)) return [3 /*break*/, 6];
+                                                        section = _c[_b];
+                                                        createdSection = new Task(section.name, createdProject);
+                                                        createdSection.added = new Date(section.added_at);
+                                                        sectionIdMappings[section.id] = createdSection;
+                                                        createdSection.sequential = false;
+                                                        if (!section.is_archived) return [3 /*break*/, 5];
+                                                        return [4 /*yield*/, getEndPoint("archive/items?section_id=" + section.id, null, 'GET')];
+                                                    case 3:
+                                                        completedItemsData = _d.sent();
+                                                        console.log(JSON.stringify(completedItemsData));
+                                                        return [4 /*yield*/, processItemsAndMarkComplete(completedItemsData)];
+                                                    case 4:
+                                                        _d.sent();
+                                                        _d.label = 5;
+                                                    case 5:
+                                                        _b++;
+                                                        return [3 /*break*/, 2];
+                                                    case 6:
                                                         remainingTasks = projectDataResponse.items;
                                                         _loop_2 = function () {
                                                             var tasksToRemove = [];
@@ -228,13 +243,15 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             if (state_1 === "break")
                                                                 break;
                                                         }
-                                                        if (!projectsContainingCompletedTasks.includes(project.id)) return [3 /*break*/, 3];
+                                                        if (!projectsContainingCompletedTasks.includes(project.id)) return [3 /*break*/, 9];
                                                         return [4 /*yield*/, getEndPoint("archive/items?project_id=" + project.id, null, 'GET')];
-                                                    case 2:
+                                                    case 7:
                                                         completedItemsData = _d.sent();
-                                                        processItemsAndMarkComplete(completedItemsData);
-                                                        _d.label = 3;
-                                                    case 3: return [2 /*return*/];
+                                                        return [4 /*yield*/, processItemsAndMarkComplete(completedItemsData)];
+                                                    case 8:
+                                                        _d.sent();
+                                                        _d.label = 9;
+                                                    case 9: return [2 /*return*/];
                                                 }
                                             });
                                         };
