@@ -35,6 +35,21 @@
             return JSON.parse(response.bodyString)
         }
 
+        const ARCH_MAX_PAGE_SIZE = 100
+        async function getArchiveItems(endpoint, offset = 0) {
+            const bodyData = {limit: ARCH_MAX_PAGE_SIZE, offset: offset}
+            let page = await getEndPoint(endpoint, bodyData, 'GET')
+            if (page.has_more) {
+                const remainder = await getArchiveItems(endpoint, offset + COMPL_MAX_PAGE_SIZE);
+                return {
+                  items: page.items.concat(remainder.items),
+                  completed_info: Object.assign({}, page.completed_info, remainder.completed_info),
+                };
+              } else {
+                return page;
+              }
+        }
+
 
         // CREATE TAGS
         const priorityTagGroup = tagNamed('Priority') || new Tag('Priority', null)
@@ -65,8 +80,6 @@
               } else {
                 return page;
               }
-
-            return page
         }
 
         const completedRequest = await fetchCompleted()
@@ -89,13 +102,10 @@
 
                 // get and create projects
                 const createdProject = new Project(project.name, location)
-                if (project.created_at) createdProject.task.added = new Date(project.created_at) //TODO: note that this is not included
+                if (project.created_at) createdProject.task.added = new Date(project.created_at)
                 createdProject.sequential = false
                 projectIdMappings[project.id] = createdProject
-    
-    
-                //TODO: consider project notes - need to use /projects/get 'Get project info' if more than 10 notes
-    
+        
                 // get sections and items
                 const requestData = {project_id: project.id}
                 const projectDataResponse = await getEndPoint('projects/get_data', requestData, 'POST')
@@ -113,7 +123,7 @@
                     sectionIdMappings[section.id] = createdSection
                     createdSection.sequential = false
                     if (section.is_archived) {
-                        let completedItemsData = await getEndPoint(`archive/items?section_id=${section.id}`, null, 'GET')
+                        let completedItemsData = await getArchiveItems(`archive/items?section_id=${section.id}`)
                         await processItemsAndMarkComplete(completedItemsData)
                     }
                 }
@@ -188,7 +198,7 @@
                     for (const completedInfoId of completedInfoObject.completed_info) {
                         
                         if ('item_id' in completedInfoId) {
-                            const newCompletedInfoObject = await getEndPoint(`archive/items?parent_id=${completedInfoId.item_id}`, null, 'GET') 
+                            const newCompletedInfoObject = await getArchiveItems(`archive/items?parent_id=${completedInfoId.item_id}`) 
                             await processItemsAndMarkComplete(newCompletedInfoObject)
                         }
                     }
@@ -201,7 +211,7 @@
                 }
 
                 if (projectsContainingCompletedTasks.includes(project.id) || project.is_archived) {
-                    let completedItemsData = await getEndPoint(`archive/items?project_id=${project.id}`, null, 'GET')
+                    let completedItemsData = await getArchiveItems(`archive/items?project_id=${project.id}`)
                     await processItemsAndMarkComplete(completedItemsData)
                 }
 

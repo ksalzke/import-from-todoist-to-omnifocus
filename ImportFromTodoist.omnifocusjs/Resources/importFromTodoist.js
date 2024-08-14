@@ -76,6 +76,30 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
+            function getArchiveItems(endpoint, offset) {
+                if (offset === void 0) { offset = 0; }
+                return __awaiter(this, void 0, void 0, function () {
+                    var bodyData, page, remainder;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                bodyData = { limit: ARCH_MAX_PAGE_SIZE, offset: offset };
+                                return [4 /*yield*/, getEndPoint(endpoint, bodyData, 'GET')];
+                            case 1:
+                                page = _a.sent();
+                                if (!page.has_more) return [3 /*break*/, 3];
+                                return [4 /*yield*/, getArchiveItems(endpoint, offset + COMPL_MAX_PAGE_SIZE)];
+                            case 2:
+                                remainder = _a.sent();
+                                return [2 /*return*/, {
+                                        items: page.items.concat(remainder.items),
+                                        completed_info: Object.assign({}, page.completed_info, remainder.completed_info)
+                                    }];
+                            case 3: return [2 /*return*/, page];
+                        }
+                    });
+                });
+            }
             function fetchCompleted(offset) {
                 if (offset === void 0) { offset = 0; }
                 return __awaiter(this, void 0, void 0, function () {
@@ -97,12 +121,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                         sections: Object.assign({}, page.sections, remainder.sections)
                                     }];
                             case 3: return [2 /*return*/, page];
-                            case 4: return [2 /*return*/, page];
                         }
                     });
                 });
             }
-            var credentialsExist, form, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, COMPL_MAX_PAGE_SIZE, completedRequest, notesByItemId, projectsContainingCompletedTasks, projectIdMappings, processProjects, archivedProjectsData, archiveFolder, inboxProject;
+            var credentialsExist, form, ARCH_MAX_PAGE_SIZE, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, COMPL_MAX_PAGE_SIZE, completedRequest, notesByItemId, projectsContainingCompletedTasks, projectIdMappings, processProjects, archivedProjectsData, archiveFolder, inboxProject;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -117,6 +140,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         credentials.write('Todoist', 'Todoist User', form.values.apiToken);
                         _a.label = 2;
                     case 2:
+                        ARCH_MAX_PAGE_SIZE = 100;
                         priorityTagGroup = tagNamed('Priority') || new Tag('Priority', null);
                         priorityTags = {
                             1: new Tag("Priority 1", priorityTagGroup),
@@ -196,7 +220,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                                 if (!(_b < _c.length)) return [3 /*break*/, 5];
                                                                 completedInfoId = _c[_b];
                                                                 if (!('item_id' in completedInfoId)) return [3 /*break*/, 4];
-                                                                return [4 /*yield*/, getEndPoint("archive/items?parent_id=" + completedInfoId.item_id, null, 'GET')];
+                                                                return [4 /*yield*/, getArchiveItems("archive/items?parent_id=" + completedInfoId.item_id)];
                                                             case 2:
                                                                 newCompletedInfoObject = _e.sent();
                                                                 return [4 /*yield*/, processItemsAndMarkComplete(newCompletedInfoObject)];
@@ -225,7 +249,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                         taskIdMappings = {};
                                                         createdProject = new Project(project.name, location);
                                                         if (project.created_at)
-                                                            createdProject.task.added = new Date(project.created_at); //TODO: note that this is not included
+                                                            createdProject.task.added = new Date(project.created_at);
                                                         createdProject.sequential = false;
                                                         projectIdMappings[project.id] = createdProject;
                                                         requestData = { project_id: project.id };
@@ -250,7 +274,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                         sectionIdMappings[section.id] = createdSection;
                                                         createdSection.sequential = false;
                                                         if (!section.is_archived) return [3 /*break*/, 5];
-                                                        return [4 /*yield*/, getEndPoint("archive/items?section_id=" + section.id, null, 'GET')];
+                                                        return [4 /*yield*/, getArchiveItems("archive/items?section_id=" + section.id)];
                                                     case 3:
                                                         completedItemsData = _f.sent();
                                                         return [4 /*yield*/, processItemsAndMarkComplete(completedItemsData)];
@@ -288,7 +312,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                                 break;
                                                         }
                                                         if (!(projectsContainingCompletedTasks.includes(project.id) || project.is_archived)) return [3 /*break*/, 9];
-                                                        return [4 /*yield*/, getEndPoint("archive/items?project_id=" + project.id, null, 'GET')];
+                                                        return [4 /*yield*/, getArchiveItems("archive/items?project_id=" + project.id)];
                                                     case 7:
                                                         completedItemsData = _f.sent();
                                                         return [4 /*yield*/, processItemsAndMarkComplete(completedItemsData)];
