@@ -6,7 +6,7 @@
         // PROMPT FOR API IF NOT ALREADY STORED
         const credentialsExist = credentials.read('Todoist')
 
-        if (!credentialsExist) {
+        if (!credentialsExist || app.optionKeyDown) {
 
             const form = new Form()
             form.addField(new Form.Field.String('apiToken', 'API Token',null, null), null)

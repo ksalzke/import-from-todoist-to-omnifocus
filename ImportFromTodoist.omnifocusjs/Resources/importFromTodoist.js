@@ -148,7 +148,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                 switch (_a.label) {
                     case 0:
                         credentialsExist = credentials.read('Todoist');
-                        if (!!credentialsExist) return [3 /*break*/, 2];
+                        if (!(!credentialsExist || app.optionKeyDown)) return [3 /*break*/, 2];
                         form = new Form();
                         form.addField(new Form.Field.String('apiToken', 'API Token', null, null), null);
                         return [4 /*yield*/, form.show('Enter Todoist API Token', 'Continue')];
