@@ -65,7 +65,7 @@
 
         const COMPL_MAX_PAGE_SIZE = 200
         async function fetchCompleted (offset = 0) {
-            const completedRequestBody = {limit: COMPL_MAX_PAGE_SIZE, offset: offset, annotate_notes: "true"}
+            const completedRequestBody = {limit: COMPL_MAX_PAGE_SIZE, offset: offset, annotate_notes: "true", annotate_items: "true"}
             let page = await getEndPoint('completed/get_all', completedRequestBody, 'POST')
 
             if (page.items.length > 0) {
@@ -82,7 +82,7 @@
 
         const completedRequest = await fetchCompleted()
 
-        const notesByItemId = completedRequest.items.reduce((acc, item) => {
+        const completedNotesByItemId = completedRequest.items.reduce((acc, item) => {
             if (item.notes.length > 0) {
               acc[item.task_id] = item.notes;
             }
@@ -95,6 +95,7 @@
         const projectIdMappings = {}
         const processProjects = async (projects, location) => {
             for (const project of projects) {
+                console.log("processing project: " + project.name)
 
                 let taskIdMappings = {}
 
@@ -126,9 +127,7 @@
                     }
                 }
     
-                // create tasks/items
-
-    
+                // create tasks/items    
                 function addTask (item) {
                     const taskName = item.description ? `${item.content}\n ${item.description}` : item.content
                     const location = item.parent_id ? taskIdMappings[item.parent_id] : item.section_id ? sectionIdMappings[item.section_id] : createdProject
@@ -154,7 +153,7 @@
     
                     // add notes for task 
                     const notesFromIncompleteTasks = requestResponse.notes.filter(note => note.item_id === item.id)
-                    const notesFromCompleteTasks = notesByItemId[item.id] || []
+                    const notesFromCompleteTasks = completedNotesByItemId[item.id] || []
 
                     const notes = [...notesFromIncompleteTasks, ...notesFromCompleteTasks]
                     for (const note of notes) {
@@ -163,8 +162,10 @@
 
                     return createdTask
                 }
-    
-                let remainingTasks = projectDataResponse.items
+
+                const completedTasks = completedRequest.items.filter(item => item.project_id === project.id).map(item => item.item_object)
+
+                let remainingTasks = [...projectDataResponse.items, ...completedTasks]
                 while (remainingTasks.length > 0) {
                     const tasksToRemove: number[] = [];
                 
@@ -184,6 +185,11 @@
                     // Filter out tasks that have been added
                     remainingTasks = remainingTasks.filter((_, index) => !tasksToRemove.includes(index));
                 } 
+
+                // mark completed tasks complete
+                for (const task of completedTasks) {
+                    taskIdMappings[task.id].markComplete(new Date(task.completed_at))
+                }
 
 
                 // deal with completed items
@@ -207,12 +213,6 @@
                         task.markComplete(date)
                     }
                 }
-
-                if (projectsContainingCompletedTasks.includes(project.id) || project.is_archived) {
-                    let completedItemsData = await getArchiveItems(`archive/items?project_id=${project.id}`)
-                    await processItemsAndMarkComplete(completedItemsData)
-                }
-
 
             }
 

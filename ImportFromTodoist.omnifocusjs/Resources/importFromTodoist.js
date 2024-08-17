@@ -103,7 +103,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     return __generator(this, function (_a) {
                         switch (_a.label) {
                             case 0:
-                                completedRequestBody = { limit: COMPL_MAX_PAGE_SIZE, offset: offset, annotate_notes: "true" };
+                                completedRequestBody = { limit: COMPL_MAX_PAGE_SIZE, offset: offset, annotate_notes: "true", annotate_items: "true" };
                                 return [4 /*yield*/, getEndPoint('completed/get_all', completedRequestBody, 'POST')];
                             case 1:
                                 page = _a.sent();
@@ -142,7 +142,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
-            var credentialsExist, form, ARCH_MAX_PAGE_SIZE, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, COMPL_MAX_PAGE_SIZE, completedRequest, notesByItemId, projectsContainingCompletedTasks, projectIdMappings, processProjects, ARCH_PROJ_PAGE_SIZE, archivedProjectsData, archiveFolder, inboxProject;
+            var credentialsExist, form, ARCH_MAX_PAGE_SIZE, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, COMPL_MAX_PAGE_SIZE, completedRequest, completedNotesByItemId, projectsContainingCompletedTasks, projectIdMappings, processProjects, ARCH_PROJ_PAGE_SIZE, archivedProjectsData, archiveFolder, inboxProject;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -174,7 +174,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         return [4 /*yield*/, fetchCompleted()];
                     case 4:
                         completedRequest = _a.sent();
-                        notesByItemId = completedRequest.items.reduce(function (acc, item) {
+                        completedNotesByItemId = completedRequest.items.reduce(function (acc, item) {
                             if (item.notes.length > 0) {
                                 acc[item.task_id] = item.notes;
                             }
@@ -188,7 +188,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                 switch (_a.label) {
                                     case 0:
                                         _loop_1 = function (project) {
-                                            // create tasks/items
+                                            // create tasks/items    
                                             function addTask(item) {
                                                 var taskName = item.description ? item.content + "\n " + item.description : item.content;
                                                 var location = item.parent_id ? taskIdMappings[item.parent_id] : item.section_id ? sectionIdMappings[item.section_id] : createdProject;
@@ -210,7 +210,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                 createdTask.addTags(__spreadArray([priorityTags[item.priority]], tagArray, true));
                                                 // add notes for task 
                                                 var notesFromIncompleteTasks = requestResponse.notes.filter(function (note) { return note.item_id === item.id; });
-                                                var notesFromCompleteTasks = notesByItemId[item.id] || [];
+                                                var notesFromCompleteTasks = completedNotesByItemId[item.id] || [];
                                                 var notes = __spreadArray(__spreadArray([], notesFromIncompleteTasks, true), notesFromCompleteTasks, true);
                                                 for (var _i = 0, notes_1 = notes; _i < notes_1.length; _i++) {
                                                     var note = notes_1[_i];
@@ -259,10 +259,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                     });
                                                 });
                                             }
-                                            var taskIdMappings, createdProject, requestData, projectDataResponse, _b, _c, note, sectionIdMappings, _d, _e, section, createdSection, completedItemsData, remainingTasks, _loop_2, state_1, completedItemsData;
-                                            return __generator(this, function (_f) {
-                                                switch (_f.label) {
+                                            var taskIdMappings, createdProject, requestData, projectDataResponse, _b, _c, note, sectionIdMappings, _d, _e, section, createdSection, completedItemsData, completedTasks, remainingTasks, _loop_2, state_1, _f, completedTasks_1, task;
+                                            return __generator(this, function (_g) {
+                                                switch (_g.label) {
                                                     case 0:
+                                                        console.log("processing project: " + project.name);
                                                         taskIdMappings = {};
                                                         createdProject = new Project(project.name, location);
                                                         if (project.created_at)
@@ -274,7 +275,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             // add project notes
                                                         ];
                                                     case 1:
-                                                        projectDataResponse = _f.sent();
+                                                        projectDataResponse = _g.sent();
                                                         // add project notes
                                                         for (_b = 0, _c = projectDataResponse.project_notes; _b < _c.length; _b++) {
                                                             note = _c[_b];
@@ -282,7 +283,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                         }
                                                         sectionIdMappings = {};
                                                         _d = 0, _e = projectDataResponse.sections;
-                                                        _f.label = 2;
+                                                        _g.label = 2;
                                                     case 2:
                                                         if (!(_d < _e.length)) return [3 /*break*/, 6];
                                                         section = _e[_d];
@@ -293,16 +294,17 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                         if (!section.is_archived) return [3 /*break*/, 5];
                                                         return [4 /*yield*/, getArchiveItems("archive/items?section_id=" + section.id)];
                                                     case 3:
-                                                        completedItemsData = _f.sent();
+                                                        completedItemsData = _g.sent();
                                                         return [4 /*yield*/, processItemsAndMarkComplete(completedItemsData)];
                                                     case 4:
-                                                        _f.sent();
-                                                        _f.label = 5;
+                                                        _g.sent();
+                                                        _g.label = 5;
                                                     case 5:
                                                         _d++;
                                                         return [3 /*break*/, 2];
                                                     case 6:
-                                                        remainingTasks = projectDataResponse.items;
+                                                        completedTasks = completedRequest.items.filter(function (item) { return item.project_id === project.id; }).map(function (item) { return item.item_object; });
+                                                        remainingTasks = __spreadArray(__spreadArray([], projectDataResponse.items, true), completedTasks, true);
                                                         _loop_2 = function () {
                                                             var tasksToRemove = [];
                                                             for (var i = 0; i < remainingTasks.length; i++) {
@@ -314,8 +316,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             }
                                                             // fallback to stop us getting stuck in infinite loop - add any remaining tasks to root of project
                                                             if (tasksToRemove.length === 0) {
-                                                                for (var _g = 0, remainingTasks_1 = remainingTasks; _g < remainingTasks_1.length; _g++) {
-                                                                    var task = remainingTasks_1[_g];
+                                                                for (var _h = 0, remainingTasks_1 = remainingTasks; _h < remainingTasks_1.length; _h++) {
+                                                                    var task = remainingTasks_1[_h];
                                                                     addTask(task);
                                                                 }
                                                                 return "break";
@@ -328,15 +330,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             if (state_1 === "break")
                                                                 break;
                                                         }
-                                                        if (!(projectsContainingCompletedTasks.includes(project.id) || project.is_archived)) return [3 /*break*/, 9];
-                                                        return [4 /*yield*/, getArchiveItems("archive/items?project_id=" + project.id)];
-                                                    case 7:
-                                                        completedItemsData = _f.sent();
-                                                        return [4 /*yield*/, processItemsAndMarkComplete(completedItemsData)];
-                                                    case 8:
-                                                        _f.sent();
-                                                        _f.label = 9;
-                                                    case 9: return [2 /*return*/];
+                                                        // mark completed tasks complete
+                                                        for (_f = 0, completedTasks_1 = completedTasks; _f < completedTasks_1.length; _f++) {
+                                                            task = completedTasks_1[_f];
+                                                            taskIdMappings[task.id].markComplete(new Date(task.completed_at));
+                                                        }
+                                                        return [2 /*return*/];
                                                 }
                                             });
                                         };
