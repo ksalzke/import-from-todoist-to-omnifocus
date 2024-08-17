@@ -15,6 +15,15 @@
             credentials.write('Todoist', 'Todoist User', form.values.apiToken)
         }
 
+        const form = new Form()
+        form.addField(new Form.Field.Checkbox("importActive", "Import Active Projects", true), null)
+        form.addField(new Form.Field.Checkbox('importArchived', "Import Archived Projects", true), null)
+
+        await form.show("Select Items To Import", "Import")
+
+        const importActive = form.values.importActive
+        const importArchived = form.values.importArchived
+
         async function getEndPoint(endpoint: string, bodyData, method: string) {
             const url = `https://api.todoist.com/sync/v9/${endpoint}`
 
@@ -88,8 +97,6 @@
             }
             return acc;
         }, {})
-
-        const projectsContainingCompletedTasks = requestResponse.completed_info.filter(item => 'project_id' in item).map(item => item.project_id)
 
         // PROCESS PROJECTS
         const projectIdMappings = {}
@@ -218,7 +225,7 @@
 
         }
 
-        await processProjects(requestResponse.projects, null)
+        if (importActive) await processProjects(requestResponse.projects, null)
 
 
         const ARCH_PROJ_PAGE_SIZE = 500
@@ -234,17 +241,20 @@
               }
         }
 
-        
-        const archivedProjectsData = await getArchived()
+        if (importArchived) {     
+            const archivedProjectsData = await getArchived()
 
+            const archiveFolder = folderNamed('Archive') || new Folder('Archive', null)
+            await processProjects(archivedProjectsData, archiveFolder)
 
-        const archiveFolder = folderNamed('Archive') || new Folder('Archive', null)
-        await processProjects(archivedProjectsData, archiveFolder)
+        }   
         
         // deal with inbox project (at end)
         const inboxProject = projectNamed("Inbox")
+        if (inboxProject !== null) {
         moveTasks(inboxProject.tasks, inbox.ending)
         deleteObject(inboxProject)
+        }
 
     })
 

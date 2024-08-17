@@ -142,21 +142,29 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
-            var credentialsExist, form, ARCH_MAX_PAGE_SIZE, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, COMPL_MAX_PAGE_SIZE, completedRequest, completedNotesByItemId, projectsContainingCompletedTasks, projectIdMappings, processProjects, ARCH_PROJ_PAGE_SIZE, archivedProjectsData, archiveFolder, inboxProject;
+            var credentialsExist, form_1, form, importActive, importArchived, ARCH_MAX_PAGE_SIZE, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, COMPL_MAX_PAGE_SIZE, completedRequest, completedNotesByItemId, projectIdMappings, processProjects, ARCH_PROJ_PAGE_SIZE, archivedProjectsData, archiveFolder, inboxProject;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         credentialsExist = credentials.read('Todoist');
                         if (!(!credentialsExist || app.optionKeyDown)) return [3 /*break*/, 2];
-                        form = new Form();
-                        form.addField(new Form.Field.String('apiToken', 'API Token', null, null), null);
-                        return [4 /*yield*/, form.show('Enter Todoist API Token', 'Continue')];
+                        form_1 = new Form();
+                        form_1.addField(new Form.Field.String('apiToken', 'API Token', null, null), null);
+                        return [4 /*yield*/, form_1.show('Enter Todoist API Token', 'Continue')];
                     case 1:
                         _a.sent();
-                        credentials.write('Todoist', 'Todoist User', form.values.apiToken);
+                        credentials.write('Todoist', 'Todoist User', form_1.values.apiToken);
                         _a.label = 2;
                     case 2:
+                        form = new Form();
+                        form.addField(new Form.Field.Checkbox("importActive", "Import Active Projects", true), null);
+                        form.addField(new Form.Field.Checkbox('importArchived', "Import Archived Projects", true), null);
+                        return [4 /*yield*/, form.show("Select Items To Import", "Import")];
+                    case 3:
+                        _a.sent();
+                        importActive = form.values.importActive;
+                        importArchived = form.values.importArchived;
                         ARCH_MAX_PAGE_SIZE = 100;
                         priorityTagGroup = tagNamed('Priority') || new Tag('Priority', null);
                         priorityTags = {
@@ -168,11 +176,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         repeatingTag = tagNamed('repeating') || new Tag('repeating', null);
                         bodyData = { sync_token: "*", resource_types: '["projects", "completed_info", "notes"]' };
                         return [4 /*yield*/, getEndPoint('sync', bodyData, 'POST')];
-                    case 3:
+                    case 4:
                         requestResponse = _a.sent();
                         COMPL_MAX_PAGE_SIZE = 200;
                         return [4 /*yield*/, fetchCompleted()];
-                    case 4:
+                    case 5:
                         completedRequest = _a.sent();
                         completedNotesByItemId = completedRequest.items.reduce(function (acc, item) {
                             if (item.notes.length > 0) {
@@ -180,7 +188,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                             }
                             return acc;
                         }, {});
-                        projectsContainingCompletedTasks = requestResponse.completed_info.filter(function (item) { return 'project_id' in item; }).map(function (item) { return item.project_id; });
                         projectIdMappings = {};
                         processProjects = function (projects, location) { return __awaiter(_this, void 0, void 0, function () {
                             var _loop_1, _i, projects_1, project;
@@ -355,22 +362,28 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                 }
                             });
                         }); };
+                        if (!importActive) return [3 /*break*/, 7];
                         return [4 /*yield*/, processProjects(requestResponse.projects, null)];
-                    case 5:
-                        _a.sent();
-                        ARCH_PROJ_PAGE_SIZE = 500;
-                        return [4 /*yield*/, getArchived()];
                     case 6:
+                        _a.sent();
+                        _a.label = 7;
+                    case 7:
+                        ARCH_PROJ_PAGE_SIZE = 500;
+                        if (!importArchived) return [3 /*break*/, 10];
+                        return [4 /*yield*/, getArchived()];
+                    case 8:
                         archivedProjectsData = _a.sent();
                         archiveFolder = folderNamed('Archive') || new Folder('Archive', null);
-                        return [4 /*yield*/, processProjects(archivedProjectsData, archiveFolder)
-                            // deal with inbox project (at end)
-                        ];
-                    case 7:
+                        return [4 /*yield*/, processProjects(archivedProjectsData, archiveFolder)];
+                    case 9:
                         _a.sent();
+                        _a.label = 10;
+                    case 10:
                         inboxProject = projectNamed("Inbox");
-                        moveTasks(inboxProject.tasks, inbox.ending);
-                        deleteObject(inboxProject);
+                        if (inboxProject !== null) {
+                            moveTasks(inboxProject.tasks, inbox.ending);
+                            deleteObject(inboxProject);
+                        }
                         return [2 /*return*/];
                 }
             });
