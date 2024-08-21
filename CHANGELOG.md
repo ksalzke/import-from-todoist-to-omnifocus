@@ -1,3 +1,12 @@
+# [2.3.0](https://github.com/ksalzke/import-from-todoist-to-omnifocus/compare/v2.2.0...v2.3.0) (2024-08-21)
+
+
+### Features
+
+* :loud_sound: add additional logging for troubleshooting purposes ([3e392c7](https://github.com/ksalzke/import-from-todoist-to-omnifocus/commit/3e392c7ce8f22e6adde65f8b75c29ec3296c481f))
+
+
+
 # [2.2.0](https://github.com/ksalzke/import-from-todoist-to-omnifocus/compare/v2.1.0...v2.2.0) (2024-08-17)
 
 

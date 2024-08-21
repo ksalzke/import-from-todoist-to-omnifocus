@@ -3,7 +3,7 @@
   "identifier": "com.KaitlinSalzke.importFromTodoist",
   "author": "Kaitlin Salzke",
   "description": "An OmniFocus plug-in to import tasks from Todoist, via its Sync API.",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "actions": [
     {
       "identifier": "importFromTodoist",
