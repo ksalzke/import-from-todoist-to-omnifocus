@@ -54,6 +54,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         switch (_a.label) {
                             case 0:
                                 url = "https://api.todoist.com/sync/v9/" + endpoint;
+                                console.log('hitting endpoint: ' + url);
                                 request = new URL.FetchRequest();
                                 request.method = method;
                                 request.headers = {
@@ -67,6 +68,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                 return [4 /*yield*/, request.fetch()];
                             case 1:
                                 response = _a.sent();
+                                console.log('response status: ' + response.statusCode);
+                                if (response.statusCode !== 200)
+                                    console.log(response.bodyString);
                                 return [2 /*return*/, JSON.parse(response.bodyString)];
                         }
                     });
@@ -142,7 +146,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
-            var credentialsExist, form_1, form, importActive, importArchived, ARCH_MAX_PAGE_SIZE, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, COMPL_MAX_PAGE_SIZE, completedRequest, completedNotesByItemId, projectIdMappings, processProjects, ARCH_PROJ_PAGE_SIZE, archivedProjectsData, archiveFolder, inboxProject;
+            var credentialsExist, form_1, form, importActive, importArchived, ARCH_MAX_PAGE_SIZE, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, COMPL_MAX_PAGE_SIZE, completedRequest, completedNotesByItemId, projectIdMappings, processProjects, projectSelectionForm, ARCH_PROJ_PAGE_SIZE, archivedProjectsData, archiveFolder, projectSelectionForm, inboxProject;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -362,23 +366,33 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                 }
                             });
                         }); };
-                        if (!importActive) return [3 /*break*/, 7];
-                        return [4 /*yield*/, processProjects(requestResponse.projects, null)];
+                        if (!importActive) return [3 /*break*/, 8];
+                        projectSelectionForm = new Form();
+                        projectSelectionForm.addField(new Form.Field.MultipleOptions('activeProjects', 'Active Projects', requestResponse.projects, requestResponse.projects.map(function (p) { return p.name; }), requestResponse.projects), null);
+                        return [4 /*yield*/, projectSelectionForm.show('Select Active Projects', 'OK')];
                     case 6:
                         _a.sent();
-                        _a.label = 7;
+                        return [4 /*yield*/, processProjects(projectSelectionForm.values.activeProjects, null)];
                     case 7:
-                        ARCH_PROJ_PAGE_SIZE = 500;
-                        if (!importArchived) return [3 /*break*/, 10];
-                        return [4 /*yield*/, getArchived()];
+                        _a.sent();
+                        _a.label = 8;
                     case 8:
+                        ARCH_PROJ_PAGE_SIZE = 500;
+                        if (!importArchived) return [3 /*break*/, 12];
+                        return [4 /*yield*/, getArchived()];
+                    case 9:
                         archivedProjectsData = _a.sent();
                         archiveFolder = folderNamed('Archive') || new Folder('Archive', null);
-                        return [4 /*yield*/, processProjects(archivedProjectsData, archiveFolder)];
-                    case 9:
-                        _a.sent();
-                        _a.label = 10;
+                        projectSelectionForm = new Form();
+                        projectSelectionForm.addField(new Form.Field.MultipleOptions('archivedProjects', 'Archived Projects', archivedProjectsData, archivedProjectsData.map(function (p) { return p.name; }), archivedProjectsData), null);
+                        return [4 /*yield*/, projectSelectionForm.show('Select Active Projects', 'OK')];
                     case 10:
+                        _a.sent();
+                        return [4 /*yield*/, processProjects(projectSelectionForm.values.archivedProjects, archiveFolder)];
+                    case 11:
+                        _a.sent();
+                        _a.label = 12;
+                    case 12:
                         inboxProject = projectNamed("Inbox");
                         if (inboxProject !== null) {
                             moveTasks(inboxProject.tasks, inbox.ending);

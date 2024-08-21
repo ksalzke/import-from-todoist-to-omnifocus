@@ -26,6 +26,7 @@
 
         async function getEndPoint(endpoint: string, bodyData, method: string) {
             const url = `https://api.todoist.com/sync/v9/${endpoint}`
+            console.log('hitting endpoint: ' + url)
 
             const request = new URL.FetchRequest()
             request.method = method
@@ -35,9 +36,12 @@
                     "Authorization": `Bearer ${credentials.read('Todoist').password}`
                 }
             if (method !== 'GET') request.bodyString = JSON.stringify(bodyData)
+
             request.url = URL.fromString(url)
 
             const response = await request.fetch()
+            console.log('response status: ' + response.statusCode)
+            if (response.statusCode !== 200) console.log(response.bodyString) 
             
             return JSON.parse(response.bodyString)
         }
@@ -225,8 +229,12 @@
 
         }
 
-        if (importActive) await processProjects(requestResponse.projects, null)
-
+        if (importActive) {
+            const projectSelectionForm = new Form()
+            projectSelectionForm.addField(new Form.Field.MultipleOptions('activeProjects', 'Active Projects', requestResponse.projects, requestResponse.projects.map(p => p.name), requestResponse.projects), null)
+            await projectSelectionForm.show('Select Active Projects', 'OK')
+            await processProjects(projectSelectionForm.values.activeProjects, null)
+        }
 
         const ARCH_PROJ_PAGE_SIZE = 500
         async function getArchived (offset = 0) {
@@ -243,10 +251,13 @@
 
         if (importArchived) {     
             const archivedProjectsData = await getArchived()
-
             const archiveFolder = folderNamed('Archive') || new Folder('Archive', null)
-            await processProjects(archivedProjectsData, archiveFolder)
 
+
+            const projectSelectionForm = new Form()
+            projectSelectionForm.addField(new Form.Field.MultipleOptions('archivedProjects', 'Archived Projects', archivedProjectsData, archivedProjectsData.map(p => p.name), archivedProjectsData), null)
+            await projectSelectionForm.show('Select Active Projects', 'OK')
+            await processProjects(projectSelectionForm.values.archivedProjects, archiveFolder)
         }   
         
         // deal with inbox project (at end)
