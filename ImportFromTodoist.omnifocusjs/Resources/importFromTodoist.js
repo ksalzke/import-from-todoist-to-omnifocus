@@ -100,31 +100,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
-            function fetchCompleted(offset) {
-                if (offset === void 0) { offset = 0; }
-                return __awaiter(this, void 0, void 0, function () {
-                    var completedRequestBody, page, remainder;
-                    return __generator(this, function (_a) {
-                        switch (_a.label) {
-                            case 0:
-                                completedRequestBody = { limit: COMPL_MAX_PAGE_SIZE, offset: offset, annotate_notes: "true", annotate_items: "true" };
-                                return [4 /*yield*/, getEndPoint('completed/get_all', completedRequestBody, 'POST')];
-                            case 1:
-                                page = _a.sent();
-                                if (!(page.items.length > 0)) return [3 /*break*/, 3];
-                                return [4 /*yield*/, fetchCompleted(offset + COMPL_MAX_PAGE_SIZE)];
-                            case 2:
-                                remainder = _a.sent();
-                                return [2 /*return*/, {
-                                        items: page.items.concat(remainder.items),
-                                        projects: Object.assign({}, page.projects, remainder.projects),
-                                        sections: Object.assign({}, page.sections, remainder.sections)
-                                    }];
-                            case 3: return [2 /*return*/, page];
-                        }
-                    });
-                });
-            }
             function getArchived(offset) {
                 if (offset === void 0) { offset = 0; }
                 return __awaiter(this, void 0, void 0, function () {
@@ -146,7 +121,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
-            var credentialsExist, form_1, form, importActive, importArchived, ARCH_MAX_PAGE_SIZE, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, COMPL_MAX_PAGE_SIZE, completedRequest, completedNotesByItemId, projectIdMappings, processProjects, projectSelectionForm, ARCH_PROJ_PAGE_SIZE, archivedProjectsData, archiveFolder, projectSelectionForm, inboxProject;
+            var credentialsExist, form_1, form, importActive, importArchived, ARCH_MAX_PAGE_SIZE, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, projectIdMappings, processProjects, projectSelectionForm, ARCH_PROJ_PAGE_SIZE, archivedProjectsData, archiveFolder, projectSelectionForm, inboxProject;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -179,19 +154,11 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         };
                         repeatingTag = tagNamed('repeating') || new Tag('repeating', null);
                         bodyData = { sync_token: "*", resource_types: '["projects", "completed_info", "notes"]' };
-                        return [4 /*yield*/, getEndPoint('sync', bodyData, 'POST')];
+                        return [4 /*yield*/, getEndPoint('sync', bodyData, 'POST')
+                            // PROCESS PROJECTS
+                        ];
                     case 4:
                         requestResponse = _a.sent();
-                        COMPL_MAX_PAGE_SIZE = 200;
-                        return [4 /*yield*/, fetchCompleted()];
-                    case 5:
-                        completedRequest = _a.sent();
-                        completedNotesByItemId = completedRequest.items.reduce(function (acc, item) {
-                            if (item.notes.length > 0) {
-                                acc[item.task_id] = item.notes;
-                            }
-                            return acc;
-                        }, {});
                         projectIdMappings = {};
                         processProjects = function (projects, location) { return __awaiter(_this, void 0, void 0, function () {
                             var _loop_1, _i, projects_1, project;
@@ -221,58 +188,16 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                 createdTask.addTags(__spreadArray([priorityTags[item.priority]], tagArray, true));
                                                 // add notes for task 
                                                 var notesFromIncompleteTasks = requestResponse.notes.filter(function (note) { return note.item_id === item.id; });
-                                                var notesFromCompleteTasks = completedNotesByItemId[item.id] || [];
-                                                var notes = __spreadArray(__spreadArray([], notesFromIncompleteTasks, true), notesFromCompleteTasks, true);
+                                                var notes = __spreadArray([], notesFromIncompleteTasks, true);
                                                 for (var _i = 0, notes_1 = notes; _i < notes_1.length; _i++) {
                                                     var note = notes_1[_i];
                                                     createdTask.note = createdTask.note + ("\n\n " + note.posted_at + ": " + note.content + " " + (note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''));
                                                 }
                                                 return createdTask;
                                             }
-                                            // deal with completed items
-                                            function processItemsAndMarkComplete(completedInfoObject) {
-                                                return __awaiter(this, void 0, void 0, function () {
-                                                    var createdItems, _i, _a, item, newTask, _b, _c, completedInfoId, newCompletedInfoObject, _d, createdItems_1, item, task, date;
-                                                    return __generator(this, function (_e) {
-                                                        switch (_e.label) {
-                                                            case 0:
-                                                                createdItems = [];
-                                                                for (_i = 0, _a = completedInfoObject.items; _i < _a.length; _i++) {
-                                                                    item = _a[_i];
-                                                                    newTask = addTask(item);
-                                                                    createdItems.push({ task: newTask, completedDate: new Date(item.completed_at) });
-                                                                }
-                                                                _b = 0, _c = completedInfoObject.completed_info;
-                                                                _e.label = 1;
-                                                            case 1:
-                                                                if (!(_b < _c.length)) return [3 /*break*/, 5];
-                                                                completedInfoId = _c[_b];
-                                                                if (!('item_id' in completedInfoId)) return [3 /*break*/, 4];
-                                                                return [4 /*yield*/, getArchiveItems("archive/items?parent_id=" + completedInfoId.item_id)];
-                                                            case 2:
-                                                                newCompletedInfoObject = _e.sent();
-                                                                return [4 /*yield*/, processItemsAndMarkComplete(newCompletedInfoObject)];
-                                                            case 3:
-                                                                _e.sent();
-                                                                _e.label = 4;
-                                                            case 4:
-                                                                _b++;
-                                                                return [3 /*break*/, 1];
-                                                            case 5:
-                                                                // mark complete at end, so that tasks aren't 'uncompleted' when child tasks are added
-                                                                for (_d = 0, createdItems_1 = createdItems; _d < createdItems_1.length; _d++) {
-                                                                    item = createdItems_1[_d];
-                                                                    task = item.task, date = item.date;
-                                                                    task.markComplete(date);
-                                                                }
-                                                                return [2 /*return*/];
-                                                        }
-                                                    });
-                                                });
-                                            }
-                                            var taskIdMappings, createdProject, requestData, projectDataResponse, _b, _c, note, sectionIdMappings, _d, _e, section, createdSection, completedItemsData, completedTasks, remainingTasks, _loop_2, state_1, _f, completedTasks_1, task;
-                                            return __generator(this, function (_g) {
-                                                switch (_g.label) {
+                                            var taskIdMappings, createdProject, requestData, projectDataResponse, _b, _c, note, sectionIdMappings, _d, _e, section, createdSection, remainingTasks, _loop_2, state_1;
+                                            return __generator(this, function (_f) {
+                                                switch (_f.label) {
                                                     case 0:
                                                         console.log("processing project: " + project.name);
                                                         taskIdMappings = {};
@@ -286,36 +211,21 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             // add project notes
                                                         ];
                                                     case 1:
-                                                        projectDataResponse = _g.sent();
+                                                        projectDataResponse = _f.sent();
                                                         // add project notes
                                                         for (_b = 0, _c = projectDataResponse.project_notes; _b < _c.length; _b++) {
                                                             note = _c[_b];
                                                             projectIdMappings[note.project_id].note = projectIdMappings[note.project_id].note + ("\n\n " + note.posted_at + ": " + note.content + " " + (note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''));
                                                         }
                                                         sectionIdMappings = {};
-                                                        _d = 0, _e = projectDataResponse.sections;
-                                                        _g.label = 2;
-                                                    case 2:
-                                                        if (!(_d < _e.length)) return [3 /*break*/, 6];
-                                                        section = _e[_d];
-                                                        createdSection = new Task(section.name, createdProject);
-                                                        createdSection.added = new Date(section.added_at);
-                                                        sectionIdMappings[section.id] = createdSection;
-                                                        createdSection.sequential = false;
-                                                        if (!section.is_archived) return [3 /*break*/, 5];
-                                                        return [4 /*yield*/, getArchiveItems("archive/items?section_id=" + section.id)];
-                                                    case 3:
-                                                        completedItemsData = _g.sent();
-                                                        return [4 /*yield*/, processItemsAndMarkComplete(completedItemsData)];
-                                                    case 4:
-                                                        _g.sent();
-                                                        _g.label = 5;
-                                                    case 5:
-                                                        _d++;
-                                                        return [3 /*break*/, 2];
-                                                    case 6:
-                                                        completedTasks = completedRequest.items.filter(function (item) { return item.project_id === project.id; }).map(function (item) { return item.item_object; });
-                                                        remainingTasks = __spreadArray(__spreadArray([], projectDataResponse.items, true), completedTasks, true);
+                                                        for (_d = 0, _e = projectDataResponse.sections; _d < _e.length; _d++) {
+                                                            section = _e[_d];
+                                                            createdSection = new Task(section.name, createdProject);
+                                                            createdSection.added = new Date(section.added_at);
+                                                            sectionIdMappings[section.id] = createdSection;
+                                                            createdSection.sequential = false;
+                                                        }
+                                                        remainingTasks = __spreadArray([], projectDataResponse.items, true);
                                                         _loop_2 = function () {
                                                             var tasksToRemove = [];
                                                             for (var i = 0; i < remainingTasks.length; i++) {
@@ -327,8 +237,8 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             }
                                                             // fallback to stop us getting stuck in infinite loop - add any remaining tasks to root of project
                                                             if (tasksToRemove.length === 0) {
-                                                                for (var _h = 0, remainingTasks_1 = remainingTasks; _h < remainingTasks_1.length; _h++) {
-                                                                    var task = remainingTasks_1[_h];
+                                                                for (var _g = 0, remainingTasks_1 = remainingTasks; _g < remainingTasks_1.length; _g++) {
+                                                                    var task = remainingTasks_1[_g];
                                                                     addTask(task);
                                                                 }
                                                                 return "break";
@@ -340,11 +250,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                                             state_1 = _loop_2();
                                                             if (state_1 === "break")
                                                                 break;
-                                                        }
-                                                        // mark completed tasks complete
-                                                        for (_f = 0, completedTasks_1 = completedTasks; _f < completedTasks_1.length; _f++) {
-                                                            task = completedTasks_1[_f];
-                                                            taskIdMappings[task.id].markComplete(new Date(task.completed_at));
                                                         }
                                                         return [2 /*return*/];
                                                 }
@@ -366,33 +271,33 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                 }
                             });
                         }); };
-                        if (!importActive) return [3 /*break*/, 8];
+                        if (!importActive) return [3 /*break*/, 7];
                         projectSelectionForm = new Form();
                         projectSelectionForm.addField(new Form.Field.MultipleOptions('activeProjects', 'Active Projects', requestResponse.projects, requestResponse.projects.map(function (p) { return p.name; }), requestResponse.projects), null);
                         return [4 /*yield*/, projectSelectionForm.show('Select Active Projects', 'OK')];
-                    case 6:
+                    case 5:
                         _a.sent();
                         return [4 /*yield*/, processProjects(projectSelectionForm.values.activeProjects, null)];
-                    case 7:
+                    case 6:
                         _a.sent();
-                        _a.label = 8;
-                    case 8:
+                        _a.label = 7;
+                    case 7:
                         ARCH_PROJ_PAGE_SIZE = 500;
-                        if (!importArchived) return [3 /*break*/, 12];
+                        if (!importArchived) return [3 /*break*/, 11];
                         return [4 /*yield*/, getArchived()];
-                    case 9:
+                    case 8:
                         archivedProjectsData = _a.sent();
                         archiveFolder = folderNamed('Archive') || new Folder('Archive', null);
                         projectSelectionForm = new Form();
                         projectSelectionForm.addField(new Form.Field.MultipleOptions('archivedProjects', 'Archived Projects', archivedProjectsData, archivedProjectsData.map(function (p) { return p.name; }), archivedProjectsData), null);
                         return [4 /*yield*/, projectSelectionForm.show('Select Active Projects', 'OK')];
-                    case 10:
+                    case 9:
                         _a.sent();
                         return [4 /*yield*/, processProjects(projectSelectionForm.values.archivedProjects, archiveFolder)];
-                    case 11:
+                    case 10:
                         _a.sent();
-                        _a.label = 12;
-                    case 12:
+                        _a.label = 11;
+                    case 11:
                         inboxProject = projectNamed("Inbox");
                         if (inboxProject !== null) {
                             moveTasks(inboxProject.tasks, inbox.ending);

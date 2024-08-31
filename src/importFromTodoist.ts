@@ -76,32 +76,6 @@
         const bodyData = {sync_token: "*", resource_types: '["projects", "completed_info", "notes"]'}
         const requestResponse = await getEndPoint('sync', bodyData, 'POST')
 
-        const COMPL_MAX_PAGE_SIZE = 200
-        async function fetchCompleted (offset = 0) {
-            const completedRequestBody = {limit: COMPL_MAX_PAGE_SIZE, offset: offset, annotate_notes: "true", annotate_items: "true"}
-            let page = await getEndPoint('completed/get_all', completedRequestBody, 'POST')
-
-            if (page.items.length > 0) {
-                const remainder = await fetchCompleted(offset + COMPL_MAX_PAGE_SIZE);
-                return {
-                  items: page.items.concat(remainder.items),
-                  projects: Object.assign({}, page.projects, remainder.projects),
-                  sections: Object.assign({}, page.sections, remainder.sections),
-                };
-              } else {
-                return page;
-              }
-        }
-
-        const completedRequest = await fetchCompleted()
-
-        const completedNotesByItemId = completedRequest.items.reduce((acc, item) => {
-            if (item.notes.length > 0) {
-              acc[item.task_id] = item.notes;
-            }
-            return acc;
-        }, {})
-
         // PROCESS PROJECTS
         const projectIdMappings = {}
         const processProjects = async (projects, location) => {
@@ -132,10 +106,6 @@
                     createdSection.added = new Date(section.added_at)
                     sectionIdMappings[section.id] = createdSection
                     createdSection.sequential = false
-                    if (section.is_archived) {
-                        let completedItemsData = await getArchiveItems(`archive/items?section_id=${section.id}`)
-                        await processItemsAndMarkComplete(completedItemsData)
-                    }
                 }
     
                 // create tasks/items    
@@ -164,9 +134,8 @@
     
                     // add notes for task 
                     const notesFromIncompleteTasks = requestResponse.notes.filter(note => note.item_id === item.id)
-                    const notesFromCompleteTasks = completedNotesByItemId[item.id] || []
 
-                    const notes = [...notesFromIncompleteTasks, ...notesFromCompleteTasks]
+                    const notes = [...notesFromIncompleteTasks]
                     for (const note of notes) {
                         createdTask.note = createdTask.note + `\n\n ${note.posted_at}: ${note.content} ${note.file_attachment ? '[' + note.file_attachment.file_name + '](' + note.file_attachment.file_url + ')' : ''}`
                     }
@@ -174,9 +143,7 @@
                     return createdTask
                 }
 
-                const completedTasks = completedRequest.items.filter(item => item.project_id === project.id).map(item => item.item_object)
-
-                let remainingTasks = [...projectDataResponse.items, ...completedTasks]
+                let remainingTasks = [...projectDataResponse.items]
                 while (remainingTasks.length > 0) {
                     const tasksToRemove: number[] = [];
                 
@@ -196,35 +163,6 @@
                     // Filter out tasks that have been added
                     remainingTasks = remainingTasks.filter((_, index) => !tasksToRemove.includes(index));
                 } 
-
-                // mark completed tasks complete
-                for (const task of completedTasks) {
-                    taskIdMappings[task.id].markComplete(new Date(task.completed_at))
-                }
-
-
-                // deal with completed items
-                async function processItemsAndMarkComplete (completedInfoObject) {
-                    const createdItems = []
-                    for (const item of completedInfoObject.items) {
-                        const newTask = addTask(item)
-                        createdItems.push({task: newTask, completedDate: new Date(item.completed_at)})
-                    }
-                    for (const completedInfoId of completedInfoObject.completed_info) {
-                        
-                        if ('item_id' in completedInfoId) {
-                            const newCompletedInfoObject = await getArchiveItems(`archive/items?parent_id=${completedInfoId.item_id}`) 
-                            await processItemsAndMarkComplete(newCompletedInfoObject)
-                        }
-                    }
-
-                    // mark complete at end, so that tasks aren't 'uncompleted' when child tasks are added
-                    for (const item of createdItems) {
-                        const {task, date} = item
-                        task.markComplete(date)
-                    }
-                }
-
             }
 
         }
