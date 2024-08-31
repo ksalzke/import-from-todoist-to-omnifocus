@@ -110,9 +110,10 @@
     
                 // create tasks/items    
                 function addTask (item) {
-                    const taskName = item.description ? `${item.content}\n ${item.description}` : item.content
+                    const taskName = item.content
                     const location = item.parent_id ? taskIdMappings[item.parent_id] : item.section_id ? sectionIdMappings[item.section_id] : createdProject
                     const createdTask = new Task(taskName, location)
+                    createdTask.note = item.description
                     taskIdMappings[item.id] = createdTask
 
     

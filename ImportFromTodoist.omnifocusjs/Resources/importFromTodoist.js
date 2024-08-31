@@ -168,9 +168,10 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                                         _loop_1 = function (project) {
                                             // create tasks/items    
                                             function addTask(item) {
-                                                var taskName = item.description ? item.content + "\n " + item.description : item.content;
+                                                var taskName = item.content;
                                                 var location = item.parent_id ? taskIdMappings[item.parent_id] : item.section_id ? sectionIdMappings[item.section_id] : createdProject;
                                                 var createdTask = new Task(taskName, location);
+                                                createdTask.note = item.description;
                                                 taskIdMappings[item.id] = createdTask;
                                                 // update task info
                                                 createdTask.added = new Date(item.added_at);
