@@ -1,3 +1,12 @@
+# [2.4.0](https://github.com/ksalzke/import-from-todoist-to-omnifocus/compare/v2.3.0...v2.4.0) (2024-08-31)
+
+
+### Features
+
+* :sparkles: Move task 'description' to note rather than task title. ([3072d3d](https://github.com/ksalzke/import-from-todoist-to-omnifocus/commit/3072d3d8e34198f7e5237994b5498c954aa52627))
+
+
+
 # [2.3.0](https://github.com/ksalzke/import-from-todoist-to-omnifocus/compare/v2.2.0...v2.3.0) (2024-08-21)
 
 
