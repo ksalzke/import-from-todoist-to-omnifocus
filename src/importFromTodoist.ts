@@ -18,6 +18,7 @@
         const form = new Form()
         form.addField(new Form.Field.Checkbox("importActive", "Import Active Projects", true), null)
         form.addField(new Form.Field.Checkbox('importArchived', "Import Archived Projects", true), null)
+        form.addField(new Form.Field.Checkbox('selectByDefault', "Select All By Default", true), null)
 
         await form.show("Select Items To Import", "Import")
 
@@ -45,22 +46,6 @@
             
             return JSON.parse(response.bodyString)
         }
-
-        const ARCH_MAX_PAGE_SIZE = 100
-        async function getArchiveItems(endpoint, offset = 0) {
-            const bodyData = {limit: ARCH_MAX_PAGE_SIZE, offset: offset}
-            let page = await getEndPoint(endpoint, bodyData, 'GET')
-            if (page.has_more) {
-                const remainder = await getArchiveItems(endpoint, offset + COMPL_MAX_PAGE_SIZE);
-                return {
-                  items: page.items.concat(remainder.items),
-                  completed_info: Object.assign({}, page.completed_info, remainder.completed_info),
-                };
-              } else {
-                return page;
-              }
-        }
-
 
         // CREATE TAGS
         const priorityTagGroup = tagNamed('Priority') || new Tag('Priority', null)
@@ -170,7 +155,7 @@
 
         if (importActive) {
             const projectSelectionForm = new Form()
-            projectSelectionForm.addField(new Form.Field.MultipleOptions('activeProjects', 'Active Projects', requestResponse.projects, requestResponse.projects.map(p => p.name), requestResponse.projects), null)
+            projectSelectionForm.addField(new Form.Field.MultipleOptions('activeProjects', 'Active Projects', requestResponse.projects, requestResponse.projects.map(p => p.name), form.values.selectByDefault ? requestResponse.projects : []), null)
             await projectSelectionForm.show('Select Active Projects', 'OK')
             await processProjects(projectSelectionForm.values.activeProjects, null)
         }
@@ -194,7 +179,7 @@
 
 
             const projectSelectionForm = new Form()
-            projectSelectionForm.addField(new Form.Field.MultipleOptions('archivedProjects', 'Archived Projects', archivedProjectsData, archivedProjectsData.map(p => p.name), archivedProjectsData), null)
+            projectSelectionForm.addField(new Form.Field.MultipleOptions('archivedProjects', 'Archived Projects', archivedProjectsData, archivedProjectsData.map(p => p.name), form.values.selectByDefault ? archivedProjectsData : []), null)
             await projectSelectionForm.show('Select Active Projects', 'OK')
             await processProjects(projectSelectionForm.values.archivedProjects, archiveFolder)
         }   

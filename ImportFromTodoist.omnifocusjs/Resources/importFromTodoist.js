@@ -76,30 +76,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
-            function getArchiveItems(endpoint, offset) {
-                if (offset === void 0) { offset = 0; }
-                return __awaiter(this, void 0, void 0, function () {
-                    var bodyData, page, remainder;
-                    return __generator(this, function (_a) {
-                        switch (_a.label) {
-                            case 0:
-                                bodyData = { limit: ARCH_MAX_PAGE_SIZE, offset: offset };
-                                return [4 /*yield*/, getEndPoint(endpoint, bodyData, 'GET')];
-                            case 1:
-                                page = _a.sent();
-                                if (!page.has_more) return [3 /*break*/, 3];
-                                return [4 /*yield*/, getArchiveItems(endpoint, offset + COMPL_MAX_PAGE_SIZE)];
-                            case 2:
-                                remainder = _a.sent();
-                                return [2 /*return*/, {
-                                        items: page.items.concat(remainder.items),
-                                        completed_info: Object.assign({}, page.completed_info, remainder.completed_info)
-                                    }];
-                            case 3: return [2 /*return*/, page];
-                        }
-                    });
-                });
-            }
             function getArchived(offset) {
                 if (offset === void 0) { offset = 0; }
                 return __awaiter(this, void 0, void 0, function () {
@@ -121,7 +97,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                     });
                 });
             }
-            var credentialsExist, form_1, form, importActive, importArchived, ARCH_MAX_PAGE_SIZE, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, projectIdMappings, processProjects, projectSelectionForm, ARCH_PROJ_PAGE_SIZE, archivedProjectsData, archiveFolder, projectSelectionForm, inboxProject;
+            var credentialsExist, form_1, form, importActive, importArchived, priorityTagGroup, priorityTags, repeatingTag, bodyData, requestResponse, projectIdMappings, processProjects, projectSelectionForm, ARCH_PROJ_PAGE_SIZE, archivedProjectsData, archiveFolder, projectSelectionForm, inboxProject;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -139,12 +115,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         form = new Form();
                         form.addField(new Form.Field.Checkbox("importActive", "Import Active Projects", true), null);
                         form.addField(new Form.Field.Checkbox('importArchived', "Import Archived Projects", true), null);
+                        form.addField(new Form.Field.Checkbox('selectByDefault', "Select All By Default", true), null);
                         return [4 /*yield*/, form.show("Select Items To Import", "Import")];
                     case 3:
                         _a.sent();
                         importActive = form.values.importActive;
                         importArchived = form.values.importArchived;
-                        ARCH_MAX_PAGE_SIZE = 100;
                         priorityTagGroup = tagNamed('Priority') || new Tag('Priority', null);
                         priorityTags = {
                             1: new Tag("Priority 1", priorityTagGroup),
@@ -274,7 +250,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         }); };
                         if (!importActive) return [3 /*break*/, 7];
                         projectSelectionForm = new Form();
-                        projectSelectionForm.addField(new Form.Field.MultipleOptions('activeProjects', 'Active Projects', requestResponse.projects, requestResponse.projects.map(function (p) { return p.name; }), requestResponse.projects), null);
+                        projectSelectionForm.addField(new Form.Field.MultipleOptions('activeProjects', 'Active Projects', requestResponse.projects, requestResponse.projects.map(function (p) { return p.name; }), form.values.selectByDefault ? requestResponse.projects : []), null);
                         return [4 /*yield*/, projectSelectionForm.show('Select Active Projects', 'OK')];
                     case 5:
                         _a.sent();
@@ -290,7 +266,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
                         archivedProjectsData = _a.sent();
                         archiveFolder = folderNamed('Archive') || new Folder('Archive', null);
                         projectSelectionForm = new Form();
-                        projectSelectionForm.addField(new Form.Field.MultipleOptions('archivedProjects', 'Archived Projects', archivedProjectsData, archivedProjectsData.map(function (p) { return p.name; }), archivedProjectsData), null);
+                        projectSelectionForm.addField(new Form.Field.MultipleOptions('archivedProjects', 'Archived Projects', archivedProjectsData, archivedProjectsData.map(function (p) { return p.name; }), form.values.selectByDefault ? archivedProjectsData : []), null);
                         return [4 /*yield*/, projectSelectionForm.show('Select Active Projects', 'OK')];
                     case 9:
                         _a.sent();
